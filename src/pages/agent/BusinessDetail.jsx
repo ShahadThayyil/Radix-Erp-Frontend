@@ -1,83 +1,157 @@
 import React from 'react';
-import { ArrowLeft, MapPin, Package, ShieldCheck, Star, Phone } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { 
+  ArrowLeft, MapPin, Package, ShieldCheck,Sparkles , Star, 
+  Phone, Globe, Instagram, CheckCircle2, Image as ImageIcon 
+} from 'lucide-react';
 
 const BusinessDetail = ({ unit, openModal, onBack }) => {
   if (!unit) return null;
 
+  // Dummy Images for the Portfolio Gallery
+  const gallery = [
+    "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1616489953149-864c29928a07?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1616137466211-f939a420be84?auto=format&fit=crop&w=800&q=80",
+  ];
+
   return (
-    <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-      <button onClick={onBack} className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest mb-6 hover:text-indigo-600 transition-all">
-        <ArrowLeft size={16} /> Back to Directory
-      </button>
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="max-w-7xl mx-auto pb-20"
+    >
+      {/* 1. TOP NAVIGATION & HERO COVER */}
+      <div className="relative mb-12">
+        <button 
+          onClick={onBack} 
+          className="absolute top-6 left-6 z-10 flex items-center gap-2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full text-slate-900 font-black text-[10px] uppercase tracking-widest shadow-xl border border-white/20 hover:bg-indigo-600 hover:text-white transition-all"
+        >
+          <ArrowLeft size={16} /> Back to Directory
+        </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Portfolio Gallery & Info */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-[3rem] p-10 shadow-sm border border-slate-100">
-            <div className="flex justify-between items-start mb-6">
-              <div className="h-20 w-20 bg-indigo-50 rounded-3xl flex items-center justify-center text-indigo-600">
-                <Package size={40} />
-              </div>
-              <div className="flex items-center gap-1 bg-amber-50 text-amber-600 px-4 py-2 rounded-2xl font-black text-[10px] uppercase">
-                <Star size={14} fill="currentColor" /> Premium Unit
-              </div>
-            </div>
-            
-            <h2 className="text-4xl font-black tracking-tighter mb-4">{unit.name}</h2>
-            <p className="text-slate-500 leading-relaxed text-lg mb-8 italic">"{unit.description}"</p>
-
-            <div className="grid grid-cols-2 gap-4 border-t pt-8 border-slate-50">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-slate-50 rounded-xl text-slate-400"><MapPin size={20} /></div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Location</p>
-                  <p className="font-bold text-sm">Dubai, UAE</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-slate-50 rounded-xl text-slate-400"><ShieldCheck size={20} /></div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Verified by HQ</p>
-                  <p className="font-bold text-sm text-emerald-600">Active Vendor</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-[3rem] p-10 border border-slate-100 shadow-sm">
-            <h4 className="font-black text-xs uppercase tracking-widest mb-6">Our Services & Products</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {unit.products.map((p, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl font-bold text-slate-700">
-                  <div className="h-2 w-2 rounded-full bg-indigo-400"></div> {p}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Action Card */}
-        <div className="space-y-6">
-          <div className="bg-indigo-600 p-10 rounded-[3rem] shadow-xl text-white">
-            <h4 className="font-black text-xl mb-4 leading-tight">Ready to refer a client?</h4>
-            <p className="text-indigo-100 text-sm mb-8 font-medium">Earn up to 50 credits for every verified lead sent to {unit.name}.</p>
-            <button 
-              onClick={() => openModal(unit.name)}
-              className="w-full py-5 bg-white text-indigo-600 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:bg-indigo-50 transition-all active:scale-95"
-            >
-              Submit Lead Now
-            </button>
-          </div>
+        {/* High-Resolution Cover Image */}
+        <div className="h-[300 md:h-[450px] w-full rounded-[3rem] overflow-hidden shadow-2xl relative">
+          <img 
+            src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80" 
+            alt="Business Cover" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
           
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 text-center">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Support Contact</p>
-            <div className="flex items-center justify-center gap-2 text-indigo-600 font-bold">
-              <Phone size={16} /> +971 000 0000
+          {/* Logo & Identity Overlay */}
+          <div className="absolute bottom-10 left-10 flex items-end gap-6">
+            <div className="h-24 w-24 md:h-32 md:w-32 bg-white rounded-[2rem] p-4 shadow-2xl flex items-center justify-center border-4 border-white/10">
+              <Package size={60} className="text-indigo-600" />
+            </div>
+            <div className="mb-2">
+              <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter">{unit.name}</h2>
+              <div className="flex items-center gap-4 mt-2">
+                <span className="flex items-center gap-1.5 text-indigo-300 font-bold text-xs uppercase tracking-widest">
+                  <Star size={14} fill="currentColor" /> Premium Unit [cite: 13]
+                </span>
+                <span className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs uppercase tracking-widest">
+                  <ShieldCheck size={14} /> Verified Partner [cite: 30]
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 px-4 md:px-0">
+        
+        {/* 2. LEFT COLUMN: PORTFOLIO & SERVICES */}
+        <div className="lg:col-span-2 space-y-12">
+          
+          {/* About Section */}
+          <section>
+            <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em] mb-4">About the Business</h4>
+            <p className="text-xl md:text-2xl text-slate-600 leading-relaxed font-medium italic">
+              "{unit.description}"
+            </p>
+          </section>
+
+          {/* Image Gallery: Website Look */}
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em]">Project Gallery</h4>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <ImageIcon size={14} /> 4 Recent Projects
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {gallery.map((img, idx) => (
+                <motion.div 
+                  key={idx}
+                  whileHover={{ scale: 0.98 }}
+                  className="rounded-[2rem] overflow-hidden aspect-video shadow-lg border-4 border-white"
+                >
+                  <img src={img} alt="Portfolio" className="w-full h-full object-cover" />
+                </motion.div>
+              ))}
+            </div>
+          </section>
+
+          {/* Services Checklist */}
+          <section className="bg-white rounded-[3rem] p-10 border border-slate-100 shadow-sm">
+            <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em] mb-8">Specializations</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {unit.products.map((p, i) => (
+                <div key={i} className="flex items-center gap-4 p-5 bg-slate-50 rounded-2xl border border-transparent hover:border-indigo-100 transition-all">
+                  <div className="bg-white p-2 rounded-lg shadow-sm text-indigo-500">
+                    <CheckCircle2 size={18} />
+                  </div>
+                  <span className="font-bold text-slate-800 text-sm tracking-tight">{p}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {/* 3. RIGHT COLUMN: STICKY SUBMISSION CARD  */}
+        <div className="space-y-6">
+          <div className="sticky top-28 space-y-6">
+            
+            {/* Main Lead Button Card */}
+            <div className="bg-indigo-600 p-10 rounded-[3rem] shadow-2xl text-white relative overflow-hidden group">
+              <div className="relative z-10">
+                <h4 className="text-2xl font-black mb-4 leading-tight">Connect Your Network</h4>
+                <p className="text-indigo-100 text-sm mb-10 font-medium leading-relaxed">
+                  Help this unit grow and secure your credits. Agents earn up to 50 credits per successful deal[cite: 3, 44].
+                </p>
+                <button 
+                  onClick={() => openModal(unit.name)}
+                  className="w-full py-6 bg-white text-indigo-600 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] shadow-xl hover:bg-slate-900 hover:text-white transition-all active:scale-95 flex items-center justify-center gap-3"
+                >
+                  Submit Lead Now
+                </button>
+              </div>
+              <Sparkles className="absolute -bottom-6 -right-6 text-white/10 group-hover:rotate-12 transition-transform" size={150} />
+            </div>
+
+            {/* Quick Contact Info */}
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+              <div>
+                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-3">Office Location</p>
+                <div className="flex items-center gap-3 text-slate-700 font-bold text-sm">
+                  <div className="p-2 bg-slate-50 rounded-lg text-slate-400"><MapPin size={16} /></div>
+                  Dubai, UAE
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4 border-t border-slate-50">
+                <div className="flex-1 p-3 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors"><Globe size={18} /></div>
+                <div className="flex-1 p-3 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors"><Instagram size={18} /></div>
+                <div className="flex-1 p-3 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors"><Phone size={18} /></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </motion.div>
   );
 };
 
