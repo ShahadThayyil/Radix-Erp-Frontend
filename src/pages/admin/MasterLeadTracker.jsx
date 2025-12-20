@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, Download, User, Building2, Calendar, 
@@ -6,7 +6,7 @@ import {
   Activity, FileText, Phone, MapPin, UserCheck
 } from 'lucide-react';
 
-// Import your data
+// Import your initial data
 import { initialLeads } from '../../data/leadHistoryData';
 
 const MasterLeadTracker = () => {
@@ -14,10 +14,25 @@ const MasterLeadTracker = () => {
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedLead, setSelectedLead] = useState(null);
 
-  // 1. DATA SOURCE
-  const [leads] = useState(initialLeads);
+  // 1. DATA SOURCE: Linked to LocalStorage for cross-dashboard syncing
+  const [leads, setLeads] = useState(() => {
+    const saved = localStorage.getItem('vynx_leads');
+    // Returns saved data if it exists, otherwise falls back to initialLeads
+    return saved ? JSON.parse(saved) : initialLeads;
+  });
 
-  // 2. FILTERING LOGIC
+  // 2. REFRESH LOGIC: Sync data if changed in other parts of the app
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('vynx_leads');
+      if (saved) setLeads(JSON.parse(saved));
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // 2. FILTERING LOGIC (Kept exactly the same)
   const filteredLeads = leads.filter(lead => {
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch = 
@@ -31,20 +46,17 @@ const MasterLeadTracker = () => {
     return matchesSearch && matchesStatus;
   });
 
-  // 3. EXPORT FUNCTION (CSV/Excel Logic)
+  // 3. EXPORT FUNCTION (CSV/Excel Logic - Kept exactly the same)
   const handleExport = () => {
-    // Define Headers
     const headers = [
       "Lead ID", "Client Name", "Phone", "Address", 
       "Business Unit", "Service", "Description", 
       "Status", "Date", "Agent Name", "Agent ID"
     ];
 
-    // Map Data to CSV Format
     const csvRows = [
-      headers.join(','), // Header Row
+      headers.join(','), 
       ...filteredLeads.map(lead => {
-        // Wrap strings in quotes to handle commas inside text
         const row = [
           lead.id,
           `"${lead.clientName}"`,
@@ -52,7 +64,7 @@ const MasterLeadTracker = () => {
           `"${lead.clientAddress || ''}"`,
           `"${lead.businessUnit}"`,
           `"${lead.service}"`,
-          `"${(lead.description || '').replace(/(\r\n|\n|\r)/gm, " ")}"`, // Remove line breaks
+          `"${(lead.description || '').replace(/(\r\n|\n|\r)/gm, " ")}"`, 
           lead.status,
           lead.date,
           `"${lead.agentName || 'N/A'}"`,
@@ -62,7 +74,6 @@ const MasterLeadTracker = () => {
       })
     ];
 
-    // Create File and Trigger Download
     const csvString = csvRows.join('\n');
     const blob = new Blob([csvString], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -74,7 +85,6 @@ const MasterLeadTracker = () => {
     document.body.removeChild(link);
   };
 
-  // Status Badge Styling
   const statusStyles = {
     Pending: "bg-amber-50 text-amber-700 border-amber-200",
     Verified: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -96,7 +106,6 @@ const MasterLeadTracker = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Search Bar */}
           <div className="bg-white border border-gray-200 px-3 py-2 rounded-lg flex items-center gap-3 w-full md:w-80 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all">
             <Search size={16} className="text-slate-400" />
             <input 
@@ -108,7 +117,6 @@ const MasterLeadTracker = () => {
             />
           </div>
 
-          {/* Status Filter */}
           <div className="relative group">
             <div className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-2 rounded-lg cursor-pointer shadow-sm hover:bg-gray-50 transition-colors">
               <Filter size={16} className="text-slate-500" />
@@ -128,7 +136,6 @@ const MasterLeadTracker = () => {
             </div>
           </div>
 
-          {/* EXPORT BUTTON - Fixed */}
           <button 
             onClick={handleExport}
             className="p-2 bg-white border border-gray-200 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm group"
@@ -226,7 +233,7 @@ const MasterLeadTracker = () => {
         </div>
       </div>
 
-      {/* 3. DETAILED AUDIT DRAWER */}
+      {/* 3. DETAILED AUDIT DRAWER (Kept exactly the same) */}
       <AnimatePresence>
         {selectedLead && (
           <div className="fixed inset-0 z-[100] flex justify-end">
@@ -261,8 +268,6 @@ const MasterLeadTracker = () => {
                 </header>
 
                 <div className="space-y-6">
-                  
-                  {/* Client Profile */}
                   <section className="bg-slate-50 rounded-xl p-5 border border-slate-100">
                     <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-slate-200 pb-2">
                         <User size={14}/> Client Profile
@@ -286,7 +291,6 @@ const MasterLeadTracker = () => {
                     </div>
                   </section>
 
-                  {/* Service Info */}
                   <section className="grid grid-cols-2 gap-4">
                       <div className="p-4 border border-gray-200 rounded-xl bg-white">
                           <p className="text-xs text-slate-400 font-bold uppercase mb-1">Assigned Unit</p>
@@ -311,7 +315,6 @@ const MasterLeadTracker = () => {
                       </div>
                   </section>
 
-                  {/* Agent Info */}
                   <section className="bg-indigo-50 rounded-xl p-5 border border-indigo-100">
                     <h5 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-indigo-200 pb-2">
                         <UserCheck size={14}/> Sourcing Agent
@@ -330,7 +333,6 @@ const MasterLeadTracker = () => {
                         </div>
                     </div>
                   </section>
-
                 </div>
               </div>
 

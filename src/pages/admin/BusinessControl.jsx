@@ -1,35 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Building2, Eye, Trash2, X, 
   ShieldCheck, Globe, Phone, MapPin, 
-  UserPlus, Key, ExternalLink, User, Briefcase
+  UserPlus, Key, ExternalLink, Briefcase, Mail, Lock,
+  User as LucideUser // Re-aliased to LucideUser for maximum safety
 } from 'lucide-react';
-
-// Import your data (Ensure this path is correct)
-import { businessUnits } from '../../data/businessData';
 
 const BusinessControl = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState(null);
   
-  // 1. DATA STATE: Using imported data directly
-  const [units, setUnits] = useState(businessUnits || []);
+  const [units, setUnits] = useState(() => {
+    const saved = localStorage.getItem('vynx_units');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const handleCreateUnit = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
+    
     const newUnit = {
       id: `U-${Math.floor(Math.random() * 900) + 100}`,
       name: formData.get('name'),
       category: formData.get('category'),
-      username: formData.get('username'),
+      email: formData.get('email'), 
+      password: formData.get('password'), 
       status: 'Active',
-      managerName: 'Pending Assignment', // Default
+      managerName: formData.get('manager') || 'Pending Assignment',
       date: new Date().toISOString().split('T')[0]
     };
-    setUnits([...units, newUnit]);
+
+    const updatedUnits = [...units, newUnit];
+    setUnits(updatedUnits);
+    localStorage.setItem('vynx_units', JSON.stringify(updatedUnits));
     setShowAddModal(false);
+  };
+
+  const handleDelete = (id) => {
+    if(window.confirm("Terminate this business unit access?")) {
+      const updated = units.filter(u => u.id !== id);
+      setUnits(updated);
+      localStorage.setItem('vynx_units', JSON.stringify(updated));
+    }
   };
 
   return (
@@ -41,153 +54,122 @@ const BusinessControl = () => {
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
              <Building2 className="text-indigo-600" size={24} /> Business Unit Control
           </h2>
-          <p className="text-sm text-slate-500 mt-1">Provision accounts and monitor unit performance</p>
+          <p className="text-sm text-slate-500 mt-1 uppercase tracking-tighter">Provision accounts and monitor unit performance</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all shadow-md w-full md:w-auto justify-center"
+          className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg w-full md:w-auto justify-center active:scale-95"
         >
           <UserPlus size={16} /> Create New Unit
         </button>
       </div>
 
-      {/* UNITS GRID (Responsive) */}
+      {/* UNITS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {units.map((unit) => (
-          <div key={unit.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all group relative">
+          <motion.div layout key={unit.id} className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-xl hover:border-indigo-100 transition-all group relative">
             
-            {/* Status Badge */}
-            <div className={`absolute top-4 right-4 px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full border ${
-              unit.status === 'Active' 
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-              : 'bg-red-50 text-red-700 border-red-100'
+            <div className={`absolute top-4 right-4 px-2.5 py-0.5 text-[9px] font-black uppercase rounded-full border ${
+              unit.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'
             }`}>
               {unit.status}
             </div>
 
             <div className="flex items-center gap-4 mb-6">
-                <div className="h-12 w-12 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 font-bold text-lg shadow-sm">
+                <div className="h-12 w-12 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 font-black text-lg shadow-sm">
                     {unit.name.charAt(0)}
                 </div>
                 <div>
-                    <h3 className="text-sm font-bold text-slate-900 leading-tight">{unit.name}</h3>
-                    <p className="text-xs text-slate-500 font-mono mt-0.5">ID: {unit.id}</p>
+                    <h3 className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">{unit.name}</h3>
+                    <p className="text-[10px] text-slate-400 font-bold mt-0.5 uppercase tracking-widest">Node: {unit.id}</p>
                 </div>
             </div>
 
             <div className="space-y-3 mb-6">
-                <div className="flex items-center justify-between text-xs border-b border-gray-50 pb-2">
-                    <span className="text-slate-500">Category</span>
-                    <span className="font-semibold text-slate-700">{unit.category}</span>
+                <div className="flex items-center justify-between text-[11px] border-b border-gray-50 pb-2">
+                    <span className="text-slate-400 font-bold uppercase">Industry</span>
+                    <span className="font-bold text-slate-700">{unit.category}</span>
                 </div>
-                <div className="flex items-center justify-between text-xs border-b border-gray-50 pb-2">
-                    <span className="text-slate-500">Manager</span>
-                    <span className="font-semibold text-slate-700">{unit.managerName || 'Not Assigned'}</span>
+                <div className="flex items-center justify-between text-[11px] border-b border-gray-50 pb-2">
+                    <span className="text-slate-400 font-bold uppercase">Manager</span>
+                    <span className="font-bold text-slate-700">{unit.managerName}</span>
                 </div>
-                <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500">Username</span>
-                    <span className="font-mono bg-gray-100 px-1.5 rounded text-slate-600">{unit.username}</span>
+                <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400 font-bold uppercase">Access ID</span>
+                    <span className="font-mono bg-slate-50 px-2 py-0.5 rounded text-indigo-600 font-bold">{unit.email}</span>
                 </div>
             </div>
 
             <div className="flex gap-2 pt-2">
                 <button 
                     onClick={() => setSelectedUnit(unit)}
-                    className="flex-1 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-slate-700 text-xs font-bold rounded-lg transition-all shadow-sm flex items-center justify-center gap-2"
+                    className="flex-1 py-2.5 bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2"
                 >
-                    <Eye size={14}/> View Profile
+                    <Eye size={14}/> Inspect
                 </button>
-                <button className="p-2 bg-white border border-gray-200 hover:border-red-100 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-all shadow-sm">
+                <button 
+                  onClick={() => handleDelete(unit.id)}
+                  className="p-2.5 bg-white border border-gray-100 text-slate-300 hover:text-rose-600 hover:border-rose-100 rounded-xl transition-all"
+                >
                     <Trash2 size={16}/>
                 </button>
             </div>
-          </div>
+          </motion.div>
         ))}
-        
-        {/* Empty State */}
-        {units.length === 0 && (
-            <div className="col-span-full py-16 text-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                <Building2 size={32} className="mx-auto text-slate-300 mb-3"/>
-                <p className="text-sm font-medium text-slate-500">No business units found.</p>
-            </div>
-        )}
       </div>
 
       {/* CREATE UNIT MODAL */}
       <AnimatePresence>
         {showAddModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }} 
-                onClick={() => setShowAddModal(false)} 
-                className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" 
-            />
-            <motion.div 
-                initial={{ scale: 0.95, opacity: 0 }} 
-                animate={{ scale: 1, opacity: 1 }} 
-                exit={{ scale: 0.95, opacity: 0 }} 
-                className="bg-white w-full max-w-lg rounded-xl relative shadow-xl overflow-hidden z-[101]"
-            >
-              <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Provision New Unit</h3>
-                <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white w-full max-w-lg rounded-[2rem] relative shadow-2xl overflow-hidden z-[151]">
+              <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-slate-50">
+                <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Provision Infrastructure Node</h3>
+                <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-900 transition-colors">
                     <X size={20}/>
                 </button>
               </div>
               
-              <form onSubmit={handleCreateUnit} className="p-6 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Business Name</label>
-                    <input 
-                        name="name" 
-                        required 
-                        type="text" 
-                        placeholder="e.g. Real Estate Unit" 
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" 
-                    />
+              <form onSubmit={handleCreateUnit} className="p-10 space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Business Name</label>
+                    <input name="name" required type="text" placeholder="Real Estate Unit" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 transition-all" />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Category</label>
-                    <input 
-                        name="category" 
-                        required 
-                        type="text" 
-                        placeholder="e.g. Sales" 
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" 
-                    />
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Industry Category</label>
+                    <input name="category" required type="text" placeholder="Sales & Luxury" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 transition-all" />
                   </div>
                 </div>
 
-                <div className="p-5 bg-slate-50 border border-gray-200 rounded-lg space-y-4">
-                    <h5 className="text-xs font-bold text-indigo-600 uppercase tracking-wide flex items-center gap-2">
-                        <Key size={14}/> Login Authority
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unit Manager Name</label>
+                    <div className="relative">
+                      {/* FIXED: Renamed to LucideUser */}
+                      <LucideUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                      <input name="manager" required type="text" placeholder="Owner/Manager Name" className="w-full px-4 py-3 pl-12 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 transition-all" />
+                    </div>
+                </div>
+
+                <div className="p-6 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-5">
+                    <h5 className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <Key size={14}/> Security Credentials
                     </h5>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <input 
-                        name="username" 
-                        required 
-                        type="text" 
-                        placeholder="Username" 
-                        className="bg-white border border-gray-300 rounded-md px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500" 
-                      />
-                      <input 
-                        name="password" 
-                        required 
-                        type="password" 
-                        placeholder="Password" 
-                        className="bg-white border border-gray-300 rounded-md px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500" 
-                      />
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300" size={16} />
+                        <input name="email" required type="email" placeholder="Login Email (e.g. unit@vynx.in)" className="w-full bg-white border border-indigo-100 rounded-xl py-3 pl-12 pr-4 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500" />
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300" size={16} />
+                        <input name="password" required type="password" placeholder="Access Password" className="w-full bg-white border border-indigo-100 rounded-xl py-3 pl-12 pr-4 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500" />
+                      </div>
                     </div>
                 </div>
                 
-                <button 
-                    type="submit" 
-                    className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs uppercase tracking-wide shadow-sm transition-all"
-                >
-                    Generate & Save Account
+                <button type="submit" className="w-full py-4 bg-slate-900 hover:bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl transition-all active:scale-95">
+                    Generate & Authorize Node
                 </button>
               </form>
             </motion.div>
@@ -195,108 +177,57 @@ const BusinessControl = () => {
         )}
       </AnimatePresence>
 
-      {/* INSPECT UNIT MODAL */}
+      {/* INSPECT UNIT MODAL (SIDE DRAWER) */}
       <AnimatePresence>
         {selectedUnit && (
-          <div className="fixed inset-0 z-[100] flex justify-end">
+          <div className="fixed inset-0 z-[150] flex justify-end">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedUnit(null)} className="absolute inset-0 bg-slate-950/40 backdrop-blur-md" />
             <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }} 
-                onClick={() => setSelectedUnit(null)} 
-                className="absolute inset-0 bg-slate-900/20 backdrop-blur-[2px]" 
-            />
-            <motion.div 
-                initial={{ x: '100%' }} 
-                animate={{ x: 0 }} 
-                exit={{ x: '100%' }}
+                initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                className="bg-white w-full max-w-lg h-full relative shadow-2xl border-l border-gray-200 flex flex-col"
+                className="bg-white w-full max-w-md h-full relative shadow-2xl flex flex-col border-l border-slate-100"
             >
-              
-              <div className="px-6 py-6 border-b border-gray-100 flex justify-between items-start">
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
-                    <Building2 size={28}/>
+              <div className="p-10 border-b border-slate-50 flex justify-between items-start">
+                <div className="flex items-center gap-5">
+                  <div className="h-16 w-16 bg-slate-900 text-white rounded-[1.5rem] flex items-center justify-center shadow-2xl shadow-slate-200">
+                    <Building2 size={32}/>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900 leading-none">{selectedUnit.name}</h3>
-                    <p className="text-xs text-slate-500 mt-1 font-mono">ID: {selectedUnit.id}</p>
+                    <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{selectedUnit.name}</h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 italic">Registry ID: {selectedUnit.id}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedUnit(null)} className="text-slate-400 hover:text-slate-600 p-2 bg-gray-50 rounded-full hover:bg-gray-100 transition-all">
-                    <X size={20}/>
+                <button onClick={() => setSelectedUnit(null)} className="text-slate-300 hover:text-slate-900 p-2 bg-slate-50 rounded-full transition-all">
+                    <X size={24}/>
                 </button>
               </div>
 
-              <div className="p-8 overflow-y-auto flex-1 space-y-8">
-                
-                {/* 1. Contact Intelligence */}
-                <section>
-                    <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Public Contact</h5>
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                            <Phone size={16} className="text-indigo-500" />
+              <div className="p-10 overflow-y-auto flex-1 space-y-10">
+                <section className="space-y-4">
+                    <h5 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Access Intelligence</h5>
+                    <div className="grid grid-cols-1 gap-3">
+                        <div className="flex items-center gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                            <Mail size={18} className="text-indigo-500" />
                             <div>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">Phone</p>
-                                <p className="text-sm font-bold text-slate-800">{selectedUnit.primaryPhone || 'N/A'}</p>
+                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Login Identity</p>
+                                <p className="text-sm font-black text-slate-800">{selectedUnit.email}</p>
                             </div>
                         </div>
-                        <div className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                            <MapPin size={16} className="text-red-500 mt-0.5 shrink-0" />
+                        <div className="flex items-center gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                            {/* FIXED: Renamed to LucideUser */}
+                            <LucideUser size={18} className="text-indigo-500" />
                             <div>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">Location</p>
-                                <p className="text-sm font-medium text-slate-700 leading-relaxed">{selectedUnit.address || 'Address Not Set'}</p>
+                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Assigned Manager</p>
+                                <p className="text-sm font-black text-slate-800">{selectedUnit.managerName}</p>
                             </div>
                         </div>
                     </div>
                 </section>
-                
-                {/* 2. Admin & Web */}
-                <section>
-                    <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Management</h5>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 border border-gray-200 rounded-xl">
-                            <div className="flex items-center gap-2 mb-2">
-                                <User size={14} className="text-indigo-500"/>
-                                <span className="text-xs font-bold text-slate-500 uppercase">Manager</span>
-                            </div>
-                            <p className="text-sm font-bold text-slate-900">{selectedUnit.managerName || 'Unassigned'}</p>
-                        </div>
-                        <div className="p-4 border border-gray-200 rounded-xl">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Globe size={14} className="text-emerald-500"/>
-                                <span className="text-xs font-bold text-slate-500 uppercase">Website</span>
-                            </div>
-                            {selectedUnit.website ? (
-                                <a href={selectedUnit.website} target="_blank" rel="noreferrer" className="text-sm font-bold text-indigo-600 hover:underline flex items-center gap-1">
-                                    Visit Site <ExternalLink size={10}/>
-                                </a>
-                            ) : (
-                                <span className="text-sm text-slate-400 italic">Not Linked</span>
-                            )}
-                        </div>
-                    </div>
-                </section>
-
-                {/* 3. Description */}
-                <section>
-                    <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">About Unit</h5>
-                    <div className="p-5 bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <p className="text-sm text-slate-600 italic font-medium leading-relaxed">
-                            "{selectedUnit.description || 'This unit has not provided a public overview yet.'}"
-                        </p>
-                    </div>
-                </section>
-
               </div>
 
-              <div className="p-6 border-t border-gray-100 bg-gray-50 mt-auto">
-                  <button 
-                    onClick={() => setSelectedUnit(null)} 
-                    className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold uppercase tracking-wide transition-all shadow-md"
-                  >
-                    Close Panel
+              <div className="p-10 bg-slate-50 mt-auto">
+                  <button onClick={() => setSelectedUnit(null)} className="w-full py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-xl hover:bg-indigo-600 transition-all">
+                    Close Intel Profile
                   </button>
               </div>
             </motion.div>

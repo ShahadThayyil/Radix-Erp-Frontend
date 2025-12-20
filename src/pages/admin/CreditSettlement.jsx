@@ -13,48 +13,52 @@ import { initialLeads } from '../../data/leadHistoryData';
 const CreditSettlement = () => {
   const [activeSubTab, setActiveSubTab] = useState('settlements');
   const [searchTerm, setSearchTerm] = useState("");
-  const [leads, setLeads] = useState([]);
-  const [withdrawals, setWithdrawals] = useState([]);
   
-  // Modal States
-  const [selectedItem, setSelectedItem] = useState(null); 
-  const [activeModal, setActiveModal] = useState(null); // 'profile', 'lead-details', 'assign-credits', 'confirm-payout'
-  
-  const [settleAmount, setSettleAmount] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // 1. INITIALIZE DATA ONCE
-  useEffect(() => {
-    // Lead Data Initialization
+  // 1. DATA PERSISTENCE: Pulling from master localStorage key
+  const [leads, setLeads] = useState(() => {
     const savedLeads = localStorage.getItem('vynx_leads');
     const baseLeads = savedLeads ? JSON.parse(savedLeads) : initialLeads;
-    
-    // Adding consistent extra dummy leads for the settlement screen
+
+    // Extra dummy leads for settlement screen as requested in your previous logic
     const extraLeads = [
       { id: "L-990", clientName: "Arjun Mehta", clientPhone: "919876543210", clientAddress: "Marine Drive, Mumbai", businessUnit: "Real Estate", service: "Villa Sale", description: "Looking for a sea-facing 4BHK villa.", status: "Verified", credits: 0, date: "2025-12-20", agentName: "Zaid Al-Farsi", agentId: "A-401" },
       { id: "L-991", clientName: "Priya Nair", clientPhone: "918877665544", clientAddress: "Kakkanad, Kochi", businessUnit: "IT Solutions", service: "App Development", description: "E-commerce app for a clothing brand.", status: "Completed", credits: 0, date: "2025-12-20", agentName: "Sarah Mehmood", agentId: "A-402" }
     ];
-    
-    // Filter to ensure no duplicates if reloading
+
     const merged = [...baseLeads];
     extraLeads.forEach(ex => {
         if (!merged.find(m => m.id === ex.id)) merged.push(ex);
     });
-    setLeads(merged);
+    return merged;
+  });
 
-    // Withdrawal Data Initialization
-    setWithdrawals([
-      { id: 'WR-101', agentId: 'A-401', agentName: 'Zaid Al-Farsi', email: 'zaid.farsi@vynx.in', phone: '91501234567', region: 'Mumbai, MH', amount: 15000, currentWallet: 45000, totalCreditsEarned: 120000, date: '2025-12-20', status: 'Pending' },
-      { id: 'WR-102', agentId: 'A-402', agentName: 'Sarah Mehmood', email: 'sarah.m@vynx.in', phone: '91559876543', region: 'Bangalore, KA', amount: 8500, currentWallet: 12000, totalCreditsEarned: 65000, date: '2025-12-19', status: 'Pending' }
-    ]);
+  const [withdrawals, setWithdrawals] = useState([
+    { id: 'WR-101', agentId: 'A-401', agentName: 'Zaid Al-Farsi', email: 'zaid.farsi@vynx.in', phone: '91501234567', region: 'Mumbai, MH', amount: 15000, currentWallet: 45000, totalCreditsEarned: 120000, date: '2025-12-20', status: 'Pending' },
+    { id: 'WR-102', agentId: 'A-402', agentName: 'Sarah Mehmood', email: 'sarah.m@vynx.in', phone: '91559876543', region: 'Bangalore, KA', amount: 8500, currentWallet: 12000, totalCreditsEarned: 65000, date: '2025-12-19', status: 'Pending' }
+  ]);
+  
+  // Modal States
+  const [selectedItem, setSelectedItem] = useState(null); 
+  const [activeModal, setActiveModal] = useState(null); 
+  
+  const [settleAmount, setSettleAmount] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // 2. CROSS-TAB SYNC: Listen for changes from Agent or Business tabs
+  useEffect(() => {
+    const handleSync = () => {
+        const saved = localStorage.getItem('vynx_leads');
+        if (saved) setLeads(JSON.parse(saved));
+    };
+    window.addEventListener('storage', handleSync);
+    return () => window.removeEventListener('storage', handleSync);
   }, []);
 
-  // 2. FILTERING LOGIC (Computed)
+  // 3. FILTERING LOGIC (Computed)
   const filteredData = useMemo(() => {
     const term = searchTerm.toLowerCase();
     
     if (activeSubTab === 'settlements') {
-      // Show leads that are Verified/Completed but NOT settled
       return leads
         .filter(l => (l.status === 'Verified' || l.status === 'Completed') && (!l.credits || l.credits === 0))
         .filter(l => 
@@ -63,7 +67,6 @@ const CreditSettlement = () => {
           l.agentName?.toLowerCase().includes(term)
         );
     } else {
-      // Show withdrawal requests
       return withdrawals.filter(w => 
         w.agentName.toLowerCase().includes(term) || 
         w.id.toLowerCase().includes(term)
@@ -71,7 +74,7 @@ const CreditSettlement = () => {
     }
   }, [activeSubTab, searchTerm, leads, withdrawals]);
 
-  // 3. HANDLERS
+  // 4. HANDLERS
   const closeAllModals = () => {
     setSelectedItem(null);
     setActiveModal(null);
@@ -82,9 +85,15 @@ const CreditSettlement = () => {
     if (!settleAmount) return;
     setIsProcessing(true);
     setTimeout(() => {
-      const updated = leads.map(l => l.id === selectedItem.id ? { ...l, credits: parseInt(settleAmount) } : l);
-      setLeads(updated);
-      localStorage.setItem('vynx_leads', JSON.stringify(updated));
+      // Update global 'vynx_leads'
+      const masterLeads = JSON.parse(localStorage.getItem('vynx_leads') || "[]");
+      const updatedMaster = masterLeads.length > 0 
+        ? masterLeads.map(l => l.id === selectedItem.id ? { ...l, credits: parseInt(settleAmount) } : l)
+        : leads.map(l => l.id === selectedItem.id ? { ...l, credits: parseInt(settleAmount) } : l);
+
+      setLeads(updatedMaster);
+      localStorage.setItem('vynx_leads', JSON.stringify(updatedMaster));
+      
       setIsProcessing(false);
       closeAllModals();
     }, 1200);
@@ -114,7 +123,9 @@ const CreditSettlement = () => {
         <div className="flex gap-3">
             <div className="bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-lg text-center min-w-[100px]">
                 <p className="text-[10px] font-bold text-indigo-600 uppercase">Pending Leads</p>
-                <p className="text-lg font-bold text-indigo-900 leading-none mt-1">{leads.filter(l => (l.status === 'Verified' || l.status === 'Completed') && (!l.credits || l.credits === 0)).length}</p>
+                <p className="text-lg font-bold text-indigo-900 leading-none mt-1">
+                    {leads.filter(l => (l.status === 'Verified' || l.status === 'Completed') && (!l.credits || l.credits === 0)).length}
+                </p>
             </div>
             <div className="bg-amber-50 border border-amber-100 px-4 py-2 rounded-lg text-center min-w-[100px]">
                 <p className="text-[10px] font-bold text-amber-600 uppercase">Requests</p>
@@ -204,7 +215,7 @@ const CreditSettlement = () => {
         )}
       </div>
 
-      {/* --- ALL MODALS MANAGED BY AnimatePresence --- */}
+      {/* --- ALL MODALS --- */}
       <AnimatePresence>
         {activeModal && selectedItem && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -212,7 +223,6 @@ const CreditSettlement = () => {
             
             <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-lg rounded-xl relative shadow-2xl overflow-hidden z-[201]">
               
-              {/* Modal Header */}
               <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                   <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
                     {activeModal === 'profile' && 'Agent Profile'}
@@ -223,10 +233,7 @@ const CreditSettlement = () => {
                   <button onClick={closeAllModals} className="p-1 hover:bg-gray-200 rounded-full transition-colors"><X size={20}/></button>
               </div>
 
-              {/* Modal Body Content Based on activeModal */}
               <div className="p-6">
-                
-                {/* 1. LEAD AUDIT DETAILS */}
                 {activeModal === 'lead-details' && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
@@ -259,7 +266,6 @@ const CreditSettlement = () => {
                   </div>
                 )}
 
-                {/* 2. ASSIGN CREDITS FORM */}
                 {activeModal === 'assign-credits' && (
                   <div className="space-y-6">
                     <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center justify-between">
@@ -279,7 +285,6 @@ const CreditSettlement = () => {
                   </div>
                 )}
 
-                {/* 3. AGENT PROFILE (Withdrawal View) */}
                 {activeModal === 'profile' && (
                   <div className="space-y-6 text-center">
                     <div className="h-20 w-20 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-3xl font-bold shadow-lg mx-auto">{selectedItem.agentName?.[0]}</div>
@@ -299,7 +304,6 @@ const CreditSettlement = () => {
                   </div>
                 )}
 
-                {/* 4. CONFIRM PAYOUT */}
                 {activeModal === 'confirm-payout' && (
                   <div className="text-center space-y-6">
                     <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto"><ShieldAlert size={32}/></div>

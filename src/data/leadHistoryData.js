@@ -1,3 +1,8 @@
+/**
+ * VYNX INFRASTRUCTURE - MASTER LEAD REPOSITORY
+ * This is the 'Source of Truth' for initial data.
+ */
+
 export const initialLeads = [
   {
     id: "L-801",
@@ -9,6 +14,7 @@ export const initialLeads = [
     description: "Looking for a modern L-shaped kitchen with marble finish.",
     status: "Pending",
     date: "2025-12-18",
+    credits: 0, // Mandatory for Admin Settlement Logic
     agentName: "Zaid Al-Farsi",
     agentId: "A-401"
   },
@@ -22,6 +28,7 @@ export const initialLeads = [
     description: "Need an e-commerce website for a boutique fashion brand.",
     status: "Verified",
     date: "2025-12-19",
+    credits: 0, // Initial value before Admin manual release
     agentName: "Sarah Mehmood",
     agentId: "A-402"
   },
@@ -32,10 +39,10 @@ export const initialLeads = [
     clientAddress: "Al Barsha, Dubai",
     businessUnit: "Manpower Solutions",
     service: "Safety Staffing",
-    description: "Urgent need for safety officers.",
+    description: "Urgent need for safety officers for construction site.",
     status: "Verified",
     date: "2025-12-19",
-
+    credits: 0,
     agentName: "Omar Al-Hassan",
     agentId: "A-403"
   }

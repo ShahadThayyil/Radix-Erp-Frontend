@@ -16,24 +16,25 @@ import AgentControl from './AgentControl';
 // Data Sources
 import { initialLeads } from '../../data/leadHistoryData';
 
-const AdminHub = () => {
+const AdminHub = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showNotifications, setShowNotifications] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const notificationRef = useRef(null);
 
-  // 1. DATA LOGIC FOR NOTIFICATIONS
+  // 1. DATA SOURCE: Standardized LocalStorage Fetching
   const [leads] = useState(() => {
     const saved = localStorage.getItem('vynx_leads');
+    // Important: Fallback to initialLeads if LocalStorage is wiped
     return saved ? JSON.parse(saved) : initialLeads;
   });
 
-  // Filter leads that need manual credit assignment
+  // 2. INTELLIGENT NOTIFICATIONS
   const pendingSettlements = leads.filter(l => 
     (l.status === 'Verified' || l.status === 'Completed') && (!l.credits || l.credits === 0)
   );
 
-  // Dummy data for withdrawal requests
+  // Note: In a real system, these would also come from LocalStorage 'vynx_withdrawals'
   const withdrawalRequests = [
     { id: 'W-901', agent: 'Zaid Al-Farsi', amount: 500, time: '10m ago' },
     { id: 'W-905', agent: 'Suhail Ahmed', amount: 1200, time: '1h ago' }
@@ -41,7 +42,7 @@ const AdminHub = () => {
 
   const totalNotifications = pendingSettlements.length + withdrawalRequests.length;
 
-  // Handle outside click to close notification panel
+  // 3. EVENT HANDLERS
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
@@ -71,23 +72,23 @@ const AdminHub = () => {
     }
   };
 
-  // Reusable Sidebar Content to keep code clean
+  // 4. SIDEBAR SUB-COMPONENT
   const SidebarContent = ({ mobile = false }) => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white">
       <div className="p-8 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-slate-900 rounded-lg flex items-center justify-center text-white shadow-lg">
-            <ShieldAlert size={24} />
+          <div className="h-10 w-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-xl shadow-slate-200">
+            <ShieldAlert size={22} />
           </div>
           <div>
-            <h1 className="text-sm font-black tracking-tight uppercase">Vynx Admin</h1>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">HQ Terminal</p>
+            <h1 className="text-sm font-black tracking-tighter uppercase leading-none">Vynx Admin</h1>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Central Command</p>
           </div>
         </div>
         {mobile && (
-            <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-slate-400">
-                <X size={20}/>
-            </button>
+          <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
+            <X size={20}/>
+          </button>
         )}
       </div>
 
@@ -96,8 +97,10 @@ const AdminHub = () => {
           <button
             key={item.id}
             onClick={() => { setActiveTab(item.id); if(mobile) setIsSidebarOpen(false); }}
-            className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${
-              activeTab === item.id ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+            className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${
+              activeTab === item.id 
+                ? 'bg-slate-900 text-white shadow-2xl shadow-slate-200' 
+                : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900'
             }`}
           >
             {item.icon} {item.label}
@@ -105,39 +108,38 @@ const AdminHub = () => {
         ))}
       </nav>
 
-      <div className="p-6 border-t border-gray-100 shrink-0">
-        <button className="w-full flex items-center gap-4 px-5 py-3.5 rounded-lg text-xs font-bold uppercase tracking-wide text-red-500 hover:bg-red-50 transition-all">
-          <LogOut size={20} /> Exit Panel
+      <div className="p-6 border-t border-slate-50 shrink-0">
+        <button 
+          onClick={onLogout}
+          className="w-full flex items-center gap-4 px-5 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-50 transition-all active:scale-95"
+        >
+          <LogOut size={20} /> Exit Terminal
         </button>
       </div>
     </div>
   );
 
   return (
-    // FIX 1: h-screen and overflow-hidden ensures the window itself doesn't scroll
-    <div className="h-screen w-full bg-slate-50 text-slate-900 flex font-sans overflow-hidden">
+    <div className="h-screen w-full bg-[#FDFDFD] text-slate-900 flex font-sans overflow-hidden">
       
-      {/* --- DESKTOP SIDEBAR (Static) --- */}
-      {/* FIX 2: Hidden on mobile, Flex on desktop. Fixed width, full height. */}
-      <aside className="hidden lg:flex w-72 bg-white border-r border-gray-200 flex-col h-full shrink-0 z-20">
+      {/* DESKTOP SIDEBAR */}
+      <aside className="hidden lg:flex w-72 bg-white border-r border-slate-100 flex-col h-full shrink-0 z-20">
          <SidebarContent />
       </aside>
 
-      {/* --- MOBILE SIDEBAR (Overlay) --- */}
+      {/* MOBILE SIDEBAR */}
       <AnimatePresence>
         {isSidebarOpen && (
           <>
-            {/* Backdrop */}
             <motion.div 
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={() => setIsSidebarOpen(false)} 
-                className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[90] lg:hidden" 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)} 
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[90] lg:hidden" 
             />
-            {/* Slide-in Sidebar */}
             <motion.aside 
-              initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }}
+              initial={{ x: -320 }} animate={{ x: 0 }} exit={{ x: -320 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 w-72 bg-white h-full shadow-2xl z-[100] lg:hidden"
+              className="fixed top-0 left-0 w-72 bg-white h-full shadow-2xl z-[100] lg:hidden overflow-hidden"
             >
               <SidebarContent mobile={true} />
             </motion.aside>
@@ -145,38 +147,43 @@ const AdminHub = () => {
         )}
       </AnimatePresence>
 
-      {/* --- MAIN LAYOUT WRAPPER --- */}
-      {/* FIX 3: Flex column that takes remaining space. Contains Header and Main. */}
       <div className="flex-1 flex flex-col h-full min-w-0 relative">
         
-        {/* --- TOP BAR (Fixed Header) --- */}
-        {/* FIX 4: shrink-0 ensures it doesn't get squashed. It stays at the top. */}
-        <header className="h-20 shrink-0 bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 md:px-8 flex items-center justify-between z-[50]">
+        {/* HEADER */}
+        <header className="h-20 shrink-0 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 md:px-8 flex items-center justify-between z-[50]">
           <div className="flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-slate-100 rounded-lg"><Menu size={20}/></button>
-            <div className="hidden sm:flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-lg border border-gray-200 w-64 xl:w-96 focus-within:border-indigo-500 transition-all">
-              <Search size={18} className="text-slate-400" />
-              <input type="text" placeholder="Search data..." className="bg-transparent outline-none text-sm font-medium w-full" />
+            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2.5 bg-slate-50 rounded-xl text-slate-600 hover:bg-slate-900 hover:text-white transition-all">
+              <Menu size={20}/>
+            </button>
+            <div className="hidden sm:flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-100 w-64 xl:w-96 focus-within:border-indigo-500 focus-within:bg-white transition-all shadow-sm">
+              <Search size={18} className="text-slate-300" />
+              <input type="text" placeholder="Global system search..." className="bg-transparent outline-none text-[11px] font-bold uppercase tracking-wider w-full placeholder:text-slate-300" />
             </div>
           </div>
           
           <div className="flex items-center gap-3 md:gap-6">
             <div className="hidden lg:flex flex-col items-end">
-               <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">System Health</span>
-               <div className="flex items-center gap-1.5"><span className="relative flex h-2 w-2"><span className="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative rounded-full h-2 w-2 bg-emerald-500"></span></span><span className="text-xs font-bold text-slate-900 uppercase">Live</span></div>
+               <span className="text-[8px] font-black uppercase text-slate-300 tracking-[0.2em] leading-none mb-1">Infrastructure Health</span>
+               <div className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Active Link</span>
+               </div>
             </div>
             
-            <div className="h-8 w-px bg-gray-200 mx-2 hidden sm:block"></div>
+            <div className="h-8 w-px bg-slate-100 mx-2 hidden sm:block"></div>
 
-            {/* --- NOTIFICATION BUTTON --- */}
+            {/* NOTIFICATION HUB */}
             <div className="relative" ref={notificationRef}>
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
-                className={`relative p-2.5 rounded-lg border transition-all shadow-sm ${showNotifications ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-gray-200 text-slate-500'}`}
+                className={`relative p-3 rounded-xl border transition-all ${showNotifications ? 'bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-200' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-900 hover:text-slate-900'}`}
               >
-                <Bell size={20} />
+                <Bell size={18} />
                 {totalNotifications > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-600 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-black text-white">
+                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-rose-600 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-black text-white">
                     {totalNotifications}
                   </span>
                 )}
@@ -186,57 +193,56 @@ const AdminHub = () => {
                 {showNotifications && (
                   <motion.div 
                     initial={{ opacity: 0, y: 15, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 15, scale: 0.95 }}
-                    className="absolute top-14 right-0 w-[320px] md:w-[380px] bg-white border border-gray-200 shadow-2xl rounded-xl overflow-hidden z-[100]"
+                    className="absolute top-16 right-0 w-[320px] md:w-[380px] bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[1.5rem] overflow-hidden z-[100]"
                   >
-                    <div className="p-5 bg-slate-50 border-b border-gray-200 flex justify-between items-center">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Task Intelligence</h4>
-                      <span className="px-2 py-0.5 bg-red-100 text-red-600 rounded text-[9px] font-black">{totalNotifications} ACTION REQUIRED</span>
+                    <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 leading-none">Intelligence Queue</h4>
+                      <span className="px-2.5 py-1 bg-rose-100 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-tighter">{totalNotifications} Pending Tasks</span>
                     </div>
 
-                    <div className="max-h-[400px] overflow-y-auto">
+                    <div className="max-h-[400px] overflow-y-auto scrollbar-hide divide-y divide-slate-50">
                       {withdrawalRequests.map(req => (
-                        <button key={req.id} onClick={() => { setActiveTab('agents'); setShowNotifications(false); }} className="w-full p-4 flex items-start gap-4 hover:bg-slate-50 border-b border-gray-100 text-left transition-all group">
-                          <div className="h-10 w-10 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all"><Wallet size={18}/></div>
-                          <div className="flex-1">
-                            <p className="text-[9px] font-black text-slate-400 uppercase leading-none mb-1">Withdrawal Request • {req.time}</p>
-                            <h5 className="text-[12px] font-bold text-slate-900"><b>{req.agent}</b> requested payout of <b>{req.amount} AED</b></h5>
-                            <p className="text-[10px] text-indigo-600 font-bold mt-1 uppercase flex items-center gap-1">Review Request <ArrowRight size={10}/></p>
+                        <button key={req.id} onClick={() => { setActiveTab('agents'); setShowNotifications(false); }} className="w-full p-5 flex items-start gap-4 hover:bg-indigo-50/30 text-left transition-all group">
+                          <div className="h-10 w-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all"><Wallet size={18}/></div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[9px] font-black text-slate-400 uppercase leading-none mb-1.5">Withdrawal Request • {req.time}</p>
+                            <h5 className="text-[11px] font-bold text-slate-900 truncate leading-snug"><b>{req.agent}</b> requested payout of <b>{req.amount} INR</b></h5>
+                            <p className="text-[10px] text-indigo-600 font-black mt-2 uppercase flex items-center gap-1 tracking-widest">Authorize Now <ArrowRight size={10}/></p>
                           </div>
                         </button>
                       ))}
 
                       {pendingSettlements.map(lead => (
-                        <button key={lead.id} onClick={() => { setActiveTab('credits'); setShowNotifications(false); }} className="w-full p-4 flex items-start gap-4 hover:bg-slate-50 border-b border-gray-100 text-left transition-all group">
-                          <div className="h-10 w-10 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all"><CreditCard size={18}/></div>
-                          <div className="flex-1">
-                            <p className="text-[9px] font-black text-slate-400 uppercase leading-none mb-1">Settle Credits • Ref: {lead.id}</p>
-                            <h5 className="text-[12px] font-bold text-slate-900">Lead for <b>{lead.clientName}</b> is ready for credit settlement.</h5>
-                            <p className="text-[10px] text-indigo-600 font-bold mt-1 uppercase flex items-center gap-1">Assign Credits <ArrowRight size={10}/></p>
+                        <button key={lead.id} onClick={() => { setActiveTab('credits'); setShowNotifications(false); }} className="w-full p-5 flex items-start gap-4 hover:bg-amber-50/30 text-left transition-all group">
+                          <div className="h-10 w-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all"><CreditCard size={18}/></div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[9px] font-black text-slate-400 uppercase leading-none mb-1.5">Manual Settlement • ID: {lead.id}</p>
+                            <h5 className="text-[11px] font-bold text-slate-900 truncate leading-snug">Lead for <b>{lead.clientName}</b> is verified.</h5>
+                            <p className="text-[10px] text-indigo-600 font-black mt-2 uppercase flex items-center gap-1 tracking-widest">Assign Credits <ArrowRight size={10}/></p>
                           </div>
                         </button>
                       ))}
 
                       {totalNotifications === 0 && (
-                        <div className="p-12 text-center text-slate-300">
-                          <CheckCircle2 size={32} className="mx-auto mb-2 opacity-20" />
-                          <p className="text-[10px] font-black uppercase tracking-widest">System Clear</p>
+                        <div className="p-16 text-center text-slate-300">
+                          <CheckCircle2 size={36} className="mx-auto mb-4 opacity-10" />
+                          <p className="text-[10px] font-black uppercase tracking-[0.3em]">Queue Empty</p>
                         </div>
                       )}
                     </div>
-                    <button onClick={() => setShowNotifications(false)} className="w-full py-4 bg-white text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] hover:text-slate-900 transition-all border-t border-gray-100">Dismiss Panel</button>
+                    <button onClick={() => setShowNotifications(false)} className="w-full py-5 bg-white text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] hover:text-slate-900 transition-all border-t border-slate-50">Close Interface</button>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
             
-            <div className="h-10 w-10 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-sm shadow-md">AD</div>
+            <div className="h-10 w-10 bg-slate-900 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-xl shadow-slate-200">AD</div>
           </div>
         </header>
 
-        {/* --- CONTENT AREA (Scrollable) --- */}
-        {/* FIX 5: flex-1 takes remaining height, overflow-y-auto makes ONLY this part scroll */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-10 scroll-smooth">
-          <div className="max-w-7xl mx-auto w-full pb-10">
+        {/* CONTENT VIEWPORT */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-10 scroll-smooth bg-[#FDFDFD]">
+          <div className="max-w-7xl mx-auto w-full pb-20">
             {renderContent()}
           </div>
         </main>
