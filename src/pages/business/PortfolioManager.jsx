@@ -1,17 +1,17 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useOutletContext } from 'react-router-dom'; // 1. Outlet context ചേർത്തു
+import { useOutletContext } from 'react-router-dom';
 import { 
   Plus, Trash2, Image as ImageIcon, Briefcase, 
   Save, Eye, CheckCircle2, X, Upload, Star, MapPin, 
-  AlertCircle, Loader2, Package, ShieldCheck, Phone, Globe, ArrowRight
+  AlertCircle, Loader2, Package, ShieldCheck, Phone, Globe, ArrowRight,
+  Info, Layout, Settings, Layers, Camera, Mail, Sparkles, Clock
 } from 'lucide-react';
 
 const PortfolioManager = () => {
-  // 2. BusinessHub-ൽ നിന്ന് context വഴി ബിസിനസ് പേര് എടുക്കുന്നു
+  // --- 1. SESSION & DATA (Logic Preserved) ---
   const { businessName } = useOutletContext();
 
-  // 3. STATE & DATA SYNC (Specific to this businessName)
   const [showPreview, setShowPreview] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -22,10 +22,11 @@ const PortfolioManager = () => {
     return saved ? JSON.parse(saved) : {
       name: businessName,
       website: "https://vynx-network.com",
-      description: `Official portfolio of ${businessName}. We deliver high-performance solutions integrated within the Radix infrastructure ecosystem.`,
-      location: "Business Bay, Dubai, UAE",
-      contact: "+971 50 000 0000",
-      services: ["Infrastructure Build", "Node Maintenance", "Network Scaling"],
+      email: "contact@team.com",
+      contact: "+91 00000 00000",
+      description: `We are a professional team specializing in high-quality business execution. Our focus is on delivering exceptional client value through the Radix network.`,
+      location: "Dubai, United Arab Emirates",
+      services: ["Consulting", "Project Delivery", "Strategy"],
       gallery: [
         "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80",
         "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&q=80"
@@ -36,7 +37,7 @@ const PortfolioManager = () => {
   const [newService, setNewService] = useState("");
   const fileInputRef = useRef(null);
 
-  // 4. HANDLERS
+  // --- 2. HANDLERS (Logic Preserved) ---
   const handleSaveProcess = () => {
     setIsSaving(true);
     setTimeout(() => {
@@ -65,253 +66,252 @@ const PortfolioManager = () => {
   };
 
   return (
-    <div className="space-y-10 pb-24">
+    <div className="space-y-6 font-['Plus_Jakarta_Sans',sans-serif]  max-w-[1400px] mx-auto px-2 pb-16 lg:px-0">
       
-      {/* 1. HEADER OPERATIONAL BAR */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-8">
-        <div className="border-l-4 border-indigo-600 pl-6">
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900 uppercase">Asset Configuration</h2>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-1 italic">Registry Node: {businessName}</p>
+      {/* 1. TOP HEADER ACTION BAR */}
+      <div className="bg-white border border-slate-200 p-5 md:p-6 rounded-2xl shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div className="flex items-center gap-4">
+           <div className="h-12 w-12 bg-blue-50 rounded-xl flex items-center justify-center text-[#007ACC] border border-blue-100 shadow-sm shrink-0">
+              <Layout size={24} />
+           </div>
+           <div>
+              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">Profile Manager</h2>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                <ShieldCheck size={12} className="text-emerald-500" /> Authorized Access: {businessName}
+              </p>
+           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           <AnimatePresence>
             {saveSuccess && (
-                <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="bg-emerald-50 text-emerald-600 px-4 py-2 border border-emerald-100 text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
-                  <CheckCircle2 size={14} /> Registry Updated
-                </motion.div>
+              <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="bg-emerald-50 text-emerald-600 px-4 py-2 border border-emerald-100 text-[9px] font-black uppercase tracking-widest flex items-center gap-2 rounded-lg">
+                <CheckCircle2 size={14} /> Profile Saved
+              </motion.div>
             )}
           </AnimatePresence>
-          <button 
-            onClick={() => setShowPreview(true)} 
-            className="flex items-center gap-2 px-6 py-4 bg-white border border-slate-200 rounded-none text-[10px] font-black text-slate-600 hover:border-indigo-600 hover:text-indigo-600 transition-all uppercase tracking-widest shadow-sm"
-          >
-            <Eye size={16} /> Asset Preview
+          <button onClick={() => setShowPreview(true)} className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-600 hover:border-[#007ACC] hover:text-[#007ACC] transition-all uppercase tracking-widest shadow-sm">
+            <Eye size={16} /> Client View
           </button>
-          <button 
-            onClick={() => setShowSaveConfirm(true)} 
-            className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-none font-black text-[10px] hover:bg-indigo-600 transition-all uppercase tracking-[0.2em] shadow-2xl active:scale-[0.98]"
-          >
-            <Save size={16} /> Deploy Changes
+          <button onClick={() => setShowSaveConfirm(true)} className="flex items-center gap-2 px-6 py-3 bg-[#007ACC] text-white rounded-xl font-black text-[10px] hover:bg-[#0F172A] transition-all uppercase tracking-widest shadow-lg shadow-blue-500/10 active:scale-95">
+            <Save size={16} /> Save Changes
           </button>
         </div>
       </div>
 
-      {/* 2. PRIMARY WORKSPACE GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+      {/* 2. DENSE WORKSPACE GRID */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         
-        {/* NODE 01: IDENTITY & DESCRIPTION */}
-        <div className="lg:col-span-8 space-y-10">
-           <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden">
-              <div className="px-8 py-5 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
-                <ShieldCheck size={18} className="text-indigo-600" />
-                <h4 className="font-black text-slate-900 text-[10px] uppercase tracking-widest">Specifications Registry</h4>
+        {/* LEFT: PRIMARY PROFILE SETTINGS */}
+        <div className="lg:col-span-8 space-y-6">
+           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm h-full flex flex-col">
+              <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50 flex items-center gap-3">
+                <Settings size={18} className="text-[#007ACC]" />
+                <h4 className="font-black text-slate-900 text-[10px] uppercase tracking-widest">Business Identity</h4>
               </div>
               
-              <div className="p-10 space-y-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                   <div className="space-y-3">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Display Alias</label>
-                      <input 
-                        type="text"
-                        value={unitData.name}
-                        onChange={(e) => setUnitData({...unitData, name: e.target.value})}
-                        className="w-full bg-slate-50 border border-slate-200 px-5 py-4 text-sm font-bold text-slate-900 outline-none focus:bg-white focus:border-indigo-600 rounded-none transition-all uppercase"
-                      />
-                   </div>
-                   <div className="space-y-3">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Registry Domain (URL)</label>
-                      <div className="relative group">
-                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={16} />
-                        <input 
-                          type="text"
-                          value={unitData.website}
-                          onChange={(e) => setUnitData({...unitData, website: e.target.value})}
-                          className="w-full bg-slate-50 border border-slate-200 pl-12 pr-5 py-4 text-xs font-bold text-indigo-600 outline-none focus:bg-white focus:border-indigo-600 rounded-none transition-all"
-                        />
-                      </div>
-                   </div>
+              <div className="p-6 md:p-8 space-y-8 flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <InputField label="Team Name" value={unitData.name} onChange={(val) => setUnitData({...unitData, name: val})} uppercase />
+                   <InputField label="Website Address" value={unitData.website} onChange={(val) => setUnitData({...unitData, website: val})} icon={<Globe size={16}/>} />
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Node Mission Overview</label>
-                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">{unitData.description.length} / 500 LIMIT</span>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">About Our Team</label>
+                    <span className="text-[8px] font-bold text-slate-300 uppercase">{unitData.description.length} / 500</span>
                   </div>
-                  <textarea 
-                    value={unitData.description}
-                    onChange={(e) => setUnitData({...unitData, description: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 p-8 text-base leading-relaxed font-medium text-slate-600 outline-none focus:bg-white focus:border-indigo-600 resize-none min-h-[300px] rounded-none transition-all"
-                    placeholder="Document the professional capabilities and operational history of this node..."
-                  />
+                  <textarea value={unitData.description} onChange={(e) => setUnitData({...unitData, description: e.target.value})} className="w-full bg-slate-50 border border-slate-200 p-6 text-sm leading-relaxed font-medium text-slate-600 outline-none focus:bg-white focus:border-[#007ACC] resize-none h-[150px] rounded-2xl transition-all" />
+                </div>
+
+                {/* SPECIFIC CONTACT ADDING SECTION */}
+                <div className="space-y-6 pt-6 border-t border-slate-50">
+                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact & Location Registry</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <InputField label="Office Location" value={unitData.location} onChange={(val) => setUnitData({...unitData, location: val})} icon={<MapPin size={14}/>} />
+                        <InputField label="Official Email" value={unitData.email} onChange={(val) => setUnitData({...unitData, email: val})} icon={<Mail size={14}/>} />
+                        <InputField label="Contact Number" value={unitData.contact} onChange={(val) => setUnitData({...unitData, contact: val})} icon={<Phone size={14}/>} />
+                    </div>
                 </div>
               </div>
            </div>
         </div>
 
-        {/* NODE 02: CAPABILITY LIST */}
-        <div className="lg:col-span-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-none shadow-2xl h-full flex flex-col">
-            <div className="px-8 py-5 border-b border-white/5 bg-white/5 flex items-center gap-3">
-              <Briefcase size={18} className="text-indigo-400" />
-              <h4 className="font-black text-white text-[10px] uppercase tracking-widest">Capabilities Registry</h4>
+        {/* RIGHT: SERVICES & GUIDE */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col h-[380px]">
+            <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50 flex items-center gap-3">
+              <Briefcase size={18} className="text-[#007ACC]" />
+              <h4 className="font-black text-slate-900 text-[10px] uppercase tracking-widest">Services Provided</h4>
             </div>
-            
-            <div className="p-8 flex-1 flex flex-col gap-8">
+            <div className="p-6 flex-1 flex flex-col gap-5 overflow-hidden">
                 <form onSubmit={addService} className="flex gap-2">
-                    <input 
-                        type="text" 
-                        value={newService} 
-                        onChange={(e) => setNewService(e.target.value)} 
-                        placeholder="New Capability..." 
-                        className="flex-1 px-5 py-4 bg-white/5 border border-white/10 rounded-none text-xs font-bold text-white outline-none focus:border-indigo-500 transition-all uppercase placeholder:text-slate-600" 
-                    />
-                    <button type="submit" className="p-4 bg-indigo-600 text-white hover:bg-white hover:text-slate-900 transition-all rounded-none shadow-xl">
-                        <Plus size={20} />
-                    </button>
+                    <input type="text" value={newService} onChange={(e) => setNewService(e.target.value)} placeholder="Add Service..." className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-[#007ACC] transition-all uppercase" />
+                    <button type="submit" className="p-2.5 bg-[#0F172A] text-white hover:bg-[#007ACC] transition-all rounded-xl shadow-md"><Plus size={18} strokeWidth={3} /></button>
                 </form>
-
-                <div className="space-y-3 flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+                <div className="space-y-2 overflow-y-auto pr-1 flex-1 custom-scrollbar">
                   {unitData.services.map((s, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-5 bg-white/5 border border-white/5 rounded-none group hover:border-indigo-500/50 transition-all">
-                          <div className="flex items-center gap-4">
-                             <div className="w-1.5 h-1.5 bg-indigo-500" />
-                             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{s}</span>
-                          </div>
-                          <button 
-                              onClick={() => setUnitData({...unitData, services: unitData.services.filter((_, i) => i !== idx)})} 
-                              className="text-slate-600 hover:text-rose-500 transition-colors"
-                          >
-                              <Trash2 size={16} />
-                          </button>
+                      <div key={idx} className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-xl group hover:border-[#007ACC] transition-all">
+                          <span className="text-[10px] font-black text-slate-700 uppercase tracking-tight">{s}</span>
+                          <button onClick={() => setUnitData({...unitData, services: unitData.services.filter((_, i) => i !== idx)})} className="text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
                       </div>
                   ))}
                 </div>
             </div>
           </div>
+
+          <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl space-y-4 shadow-sm relative overflow-hidden">
+             <div className="relative z-10 space-y-4">
+                <div className="flex items-center gap-2">
+                   <Sparkles size={18} className="text-[#007ACC]" />
+                   <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Team Tips</h4>
+                </div>
+                <div className="space-y-3">
+                   <GuideItem text="Add your official phone number" />
+                   <GuideItem text="Include project gallery images" />
+                   <GuideItem text="Verify your office address" />
+                </div>
+             </div>
+             <Layers size={100} className="absolute -bottom-10 -right-10 text-blue-100/50 -rotate-12" />
+          </div>
         </div>
 
-        {/* NODE 03: VISUAL ASSET GALLERY */}
+        {/* GALLERY EDITOR */}
         <div className="lg:col-span-12">
-          <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden">
-            <div className="px-8 py-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
               <div className="flex items-center gap-3">
-                  <ImageIcon size={20} className="text-indigo-600" />
-                  <h4 className="font-black text-slate-900 text-[10px] uppercase tracking-widest">Visual Infrastructure Gallery</h4>
+                  <ImageIcon size={20} className="text-[#007ACC]" />
+                  <h4 className="font-black text-slate-900 text-[10px] uppercase tracking-widest">Project Showcase</h4>
               </div>
               <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
-              <button 
-                onClick={() => fileInputRef.current.click()} 
-                className="flex items-center gap-3 text-white font-black text-[9px] uppercase tracking-[0.2em] bg-slate-900 px-6 py-3 hover:bg-indigo-600 transition-all rounded-none shadow-lg"
-              >
-                <Upload size={14} /> Upload Asset
+              <button onClick={() => fileInputRef.current.click()} className="flex items-center gap-2 text-[#007ACC] font-black text-[9px] uppercase tracking-widest bg-blue-50 px-4 py-2 hover:bg-[#007ACC] hover:text-white border border-blue-100 transition-all rounded-xl">
+                <Camera size={14} /> Add Image
               </button>
             </div>
-
-            <div className="p-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-8">
+            <div className="p-6 md:p-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {unitData.gallery.map((img, i) => (
-                <div key={i} className="relative group aspect-square rounded-none overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
-                  <img src={img} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" alt="Work" />
-                  <div className="absolute inset-0 bg-slate-950/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center">
-                      <button 
-                        onClick={() => setUnitData({...unitData, gallery: unitData.gallery.filter((_, idx)=> idx !== i)})} 
-                        className="p-4 bg-rose-600 text-white rounded-none hover:bg-rose-700 transition-all shadow-2xl scale-90 group-hover:scale-100 duration-500"
-                      >
-                        <Trash2 size={24}/>
-                      </button>
+                <div key={i} className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                  <img src={img} className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110" alt="Work" />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button onClick={() => setUnitData({...unitData, gallery: unitData.gallery.filter((_, idx)=> idx !== i)})} className="p-2.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all"><Trash2 size={16}/></button>
                   </div>
                 </div>
               ))}
-              
-              <button 
-                onClick={() => fileInputRef.current.click()} 
-                className="aspect-square rounded-none border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-4 text-slate-400 hover:border-indigo-400 hover:text-indigo-600 hover:bg-slate-50 transition-all group bg-slate-50/50"
-              >
-                <Plus size={40} className="group-hover:rotate-90 transition-transform duration-500" />
-                <span className="text-[9px] font-black uppercase tracking-[0.3em]">Add Asset Node</span>
+              <button onClick={() => fileInputRef.current.click()} className="aspect-square rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-[#007ACC] hover:bg-blue-50 transition-all group">
+                <Plus size={24} className="group-hover:rotate-90 transition-transform duration-300" />
+                <span className="text-[8px] font-black uppercase">Add Photo</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* --- CONFIRMATION & PREVIEW MODALS --- */}
+      {/* FOOTER
+      <div className="pt-6 flex items-center justify-center gap-4 border-t border-slate-100">
+          <Clock size={14} className="text-slate-300" />
+          <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.4em]">Team Directory Update • Management Terminal Secured</p>
+      </div> */}
+
+      {/* MODALS */}
       <AnimatePresence>
         {showSaveConfirm && (
-          <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-md">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white w-full max-w-sm rounded-none shadow-2xl border border-slate-200 overflow-hidden">
-              <div className="p-12 text-center space-y-8">
-                <div className="w-20 h-20 bg-slate-900 text-white rounded-none flex items-center justify-center mx-auto shadow-xl"><AlertCircle size={40} /></div>
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white w-full max-w-sm rounded-[2rem] p-10 shadow-2xl border border-slate-100 text-center space-y-8">
+                <div className="w-16 h-16 bg-blue-50 text-[#007ACC] rounded-3xl flex items-center justify-center mx-auto border border-blue-100"><Info size={32} /></div>
                 <div>
-                   <h4 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">Sync Registry?</h4>
-                   <p className="text-xs text-slate-500 mt-3 font-medium uppercase leading-relaxed tracking-widest">Broadcast these updates to the live agent directory?</p>
+                   <h3 className="text-xl font-black text-slate-900 uppercase">Save Changes?</h3>
+                   <p className="text-xs text-slate-500 mt-2 italic">Updates will be synced to the partner directory.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <button onClick={() => setShowSaveConfirm(false)} className="py-4 bg-slate-100 text-slate-500 font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">Abort</button>
-                  <button onClick={handleSaveProcess} disabled={isSaving} className="py-4 bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center gap-3">
-                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : "Authorize"} <ArrowRight size={14} />
-                  </button>
+                  <button onClick={() => setShowSaveConfirm(false)} className="py-3.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-bold uppercase">Cancel</button>
+<button
+  onClick={handleSaveProcess}
+  disabled={isSaving}
+  className={`py-3.5 rounded-xl text-[10px] font-bold uppercase shadow-xl transition-all flex items-center justify-center gap-2
+    ${isSaving
+      ? 'bg-slate-400 cursor-not-allowed'
+      : 'bg-[#0F172A] hover:bg-[#007ACC] text-white'}
+  `}
+>
+  {isSaving ? (
+    <>
+      <Loader2 size={16} className="animate-spin" />
+      Saving…
+    </>
+  ) : (
+    'Confirm'
+  )}
+</button>
                 </div>
-              </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
+      {/* CLIENT PREVIEW MODAL */}
       <AnimatePresence>
         {showPreview && (
-          <div className="fixed inset-0 z-[400] overflow-y-auto bg-slate-950/90 backdrop-blur-xl p-4 md:p-12 flex justify-center items-start scroll-smooth">
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-6xl bg-white rounded-none shadow-2xl flex flex-col border border-slate-200 my-10"
-            >
-              <div className="sticky top-0 z-50 bg-slate-900 px-8 py-4 flex justify-between items-center border-b border-white/5">
-                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Agent_View_Simulation_Mode</span>
-                 <button onClick={() => setShowPreview(false)} className="text-white hover:text-rose-500 transition-colors">
-                   <X size={24} />
-                 </button>
+          <div className="fixed inset-0 z-[400] overflow-y-auto bg-slate-900/95 backdrop-blur-md p-4 md:p-12 flex justify-center items-start scroll-smooth">
+            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-5xl bg-[#F8FAFC] rounded-[1rem] shadow-2xl flex flex-col border border-slate-200 my-10 overflow-hidden">
+              
+              <div className="sticky top-0 z-50 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm">
+                  <div className="flex items-center gap-2">
+                     <div className="h-2 w-2 bg-emerald-500 rounded-full" />
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Client View Simulation</span>
+                  </div>
+                  <button onClick={() => setShowPreview(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors"><X size={20} className="text-slate-500" /></button>
               </div>
               
-              <div className="p-8 md:p-16 space-y-16">
-                <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
-                   <div className="h-32 w-32 bg-slate-900 text-white flex items-center justify-center rounded-none shrink-0 border-b-8 border-indigo-600 shadow-2xl"><Package size={50} /></div>
-                   <div className="space-y-5 text-center md:text-left">
-                      <h2 className="text-4xl md:text-6xl font-black text-slate-900 uppercase tracking-tighter leading-none">{unitData.name}</h2>
-                      <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                         <span className="px-5 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg">Premium Network Node</span>
-                         <span className="px-5 py-2 bg-emerald-50 text-emerald-600 text-[10px] font-black border border-emerald-100 uppercase tracking-[0.2em]">Verified Partner</span>
+              <div className="p-8 md:p-16 space-y-12">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+                   <div className="h-24 w-24 bg-[#007ACC] text-white flex items-center justify-center rounded-2xl shrink-0 shadow-xl shadow-blue-500/20"><Briefcase size={32} strokeWidth={2.5}/></div>
+                   <div className="space-y-4 text-center md:text-left">
+                      <div className="flex items-center gap-3 justify-center md:justify-start">
+                         <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{unitData.name}</h2>
+                         <div className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded border border-emerald-100 flex items-center gap-1"><ShieldCheck size={12}/><span className="text-[8px] font-black uppercase">Verified</span></div>
+                      </div>
+                      <div className="flex flex-wrap justify-center md:justify-start gap-3">
+                         <span className="px-4 py-1.5 bg-[#007ACC] text-white text-[9px] font-black uppercase tracking-widest rounded-lg">Preferred Team</span>
+                         <span className="px-4 py-1.5 bg-white border border-slate-200 text-slate-500 text-[9px] font-black uppercase tracking-widest rounded-lg flex items-center gap-2"><MapPin size={10} /> {unitData.location}</span>
                       </div>
                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 border-t border-slate-100 pt-16">
-                   <div className="lg:col-span-8 space-y-16">
-                      <div className="space-y-6 border-l-4 border-slate-900 pl-8">
-                        <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.4em]">Operational_Mission</h4>
-                        <p className="text-2xl md:text-3xl text-slate-700 italic leading-relaxed font-light">"{unitData.description}"</p>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 border-t border-slate-100 pt-10">
+                   <div className="lg:col-span-8 space-y-12">
+                      <div className="space-y-4">
+                        <h4 className="text-[10px] font-black text-[#007ACC] uppercase tracking-[0.3em]">About Us</h4>
+                        <p className="text-lg md:text-xl text-slate-600 italic leading-relaxed font-medium">"{unitData.description}"</p>
                       </div>
 
-                      <div className="space-y-8">
-                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Node_Asset_Display</h4>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {unitData.gallery.map((img, i) => (
-                              <div key={i} className="aspect-video overflow-hidden border border-slate-100 shadow-sm group">
-                                <img src={img} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000" alt="Work" />
-                              </div>
-                            ))}
-                         </div>
+                      <div className="space-y-5">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Services</h4>
+                        <div className="flex flex-wrap gap-2">
+                           {unitData.services.map((s, i) => (<span key={i} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-700 uppercase tracking-widest shadow-sm">{s}</span>))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Work Gallery</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           {unitData.gallery.map((img, i) => (
+                             <div key={i} className="aspect-video rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
+                                <img src={img} className="w-full h-full object-cover" alt="Work Sample" />
+                             </div>
+                           ))}
+                        </div>
                       </div>
                    </div>
 
-                   <div className="lg:col-span-4 space-y-10">
-                      <div className="bg-slate-50 p-10 border border-slate-200 rounded-none shadow-sm space-y-10">
-                         <h4 className="font-black text-slate-900 uppercase tracking-[0.3em] text-[10px] border-b border-slate-200 pb-5">Registry Coordinates</h4>
-                         <div className="space-y-8">
-                            <Coordinate label="Deployment_HQ" icon={<MapPin size={18} className="text-indigo-600" />} value={unitData.location} />
-                            <Coordinate label="Digital_Registry" icon={<Globe size={18} className="text-indigo-600" />} value={unitData.website.replace('https://', '')} />
-                            <Coordinate label="Secure_Line" icon={<Phone size={18} className="text-indigo-600" />} value={unitData.contact} />
+                   <div className="lg:col-span-4 space-y-6">
+                      <div className="bg-white p-8 border border-slate-200 rounded-2xl shadow-sm space-y-6">
+                         <h4 className="font-black text-slate-900 uppercase tracking-widest text-[10px] border-b border-slate-50 pb-4">Reach Out</h4>
+                         <div className="space-y-5">
+                            <PreviewContact icon={<Globe size={16} />} label="Website" value={unitData.website.replace('https://', '')} />
+                            <PreviewContact icon={<Phone size={16} />} label="Phone" value={unitData.contact} />
+                            <PreviewContact icon={<Mail size={16} />} label="Email" value={unitData.email} />
                          </div>
-                         <button className="w-full py-5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.3em] shadow-xl hover:bg-indigo-600 transition-all">Simulate Lead Submission</button>
                       </div>
                    </div>
                 </div>
@@ -324,13 +324,30 @@ const PortfolioManager = () => {
   );
 };
 
-// --- SUB-COMPONENT ---
-const Coordinate = ({ label, icon, value }) => (
+// --- HELPERS ---
+const InputField = ({ label, value, onChange, uppercase, icon }) => (
   <div className="space-y-2">
-    <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.3em]">{label}</p>
-    <div className="flex items-center gap-4 text-sm font-bold text-slate-700 uppercase tracking-tight">
-      {icon} {value}
+     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+     <div className="relative group">
+       {icon && <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-[#007ACC]">{icon}</div>}
+       <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className={`w-full bg-slate-50 border border-slate-200 ${icon ? 'pl-11' : 'px-5'} py-3.5 rounded-xl text-xs font-black text-slate-900 outline-none focus:bg-white focus:border-[#007ACC] transition-all ${uppercase ? 'uppercase' : ''}`} />
+     </div>
+  </div>
+);
+
+const PreviewContact = ({ label, icon, value }) => (
+  <div className="flex items-center gap-3">
+    <div className="text-[#007ACC] bg-blue-50 p-2 rounded-lg">{icon}</div>
+    <div>
+       <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">{label}</p>
+       <p className="text-[11px] font-black text-slate-700 tracking-tight">{value}</p>
     </div>
+  </div>
+);
+
+const GuideItem = ({ text }) => (
+  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600 uppercase">
+     <div className="w-1 h-1 bg-[#007ACC] rounded-full" /> {text}
   </div>
 );
 

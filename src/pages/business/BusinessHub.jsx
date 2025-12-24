@@ -135,7 +135,7 @@ const BusinessHub = ({ onLogout }) => {
         <header className="h-16 border-b border-slate-200 flex items-center justify-between px-8 py-3 lg:px-12 sticky top-0 bg-white/80 backdrop-blur-xl z-20">
           <div className="flex items-center gap-4">
               <h2 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-               <span className="text-blue-600 font-extrabold uppercase italic">{currentTabName}</span>
+               <span className="text-blue-600 font-extrabold uppercase ">{currentTabName}</span>
               </h2>
           </div>
 
@@ -177,7 +177,7 @@ const BusinessHub = ({ onLogout }) => {
           </div>
         </header>
 
-        <div className="p-6 lg:p-12 max-w-[1400px] w-full mx-auto pb-32">
+        <div className="py-3 lg:px-2  max-w-[1400px] w-full mx-auto ">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -230,7 +230,7 @@ const BusinessHub = ({ onLogout }) => {
       <AnimatePresence>
         {showLogoutConfirm && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-sm p-10 rounded-[1.5rem] shadow-2xl border border-slate-100 text-center space-y-8">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-sm p-10 rounded-[1rem] shadow-2xl border border-slate-100 text-center space-y-8">
                 <div className="w-16 h-16 bg-rose-50 text-rose-600 flex items-center justify-center mx-auto rounded-3xl border border-rose-100 shadow-inner">
                   <AlertCircle size={32} strokeWidth={2.5} />
                 </div>

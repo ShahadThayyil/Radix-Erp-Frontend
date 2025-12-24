@@ -3,7 +3,8 @@ import { useOutletContext } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Users, Clock, Activity, ShieldCheck, 
-  TrendingUp, CheckCircle2, ArrowUpRight, Zap 
+  TrendingUp, CheckCircle2, ArrowUpRight, Zap,
+  Layout
 } from 'lucide-react';
 import Chart from 'react-apexcharts';
 
@@ -108,8 +109,36 @@ const BusinessOverview = () => {
   };
 
   return (
-    <div className="space-y-6 pb-24 px-4 sm:px-6 lg:px-0 max-w-[1400px] mx-auto">
+    <div className="font-['Plus_Jakarta_Sans',sans-serif] space-y-6 pb-16 px-4 sm:px-6 lg:px-0 max-w-[1400px] mx-auto">
       
+      {/* 0. HEADER SECTION */}
+      <motion.div 
+        initial={{ opacity: 0, y: -15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white border border-slate-200 p-5 md:p-6 rounded-2xl shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+      >
+        <div className="flex items-center gap-4">
+           <div className="h-12 w-12 bg-blue-50 rounded-xl flex items-center justify-center text-[#007ACC] border border-blue-100 shrink-0">
+              <TrendingUp size={24} />
+           </div>
+           <div>
+              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">Business Analytics</h2>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                <Activity size={12} className="text-[#007ACC]" /> Operational Performance: {businessName}
+              </p>
+           </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex flex-col items-end">
+             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Network Status</span>
+             <span className="text-[10px] font-bold text-emerald-600 uppercase flex items-center gap-1.5">
+               <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live Sync Active
+             </span>
+          </div>
+        </div>
+      </motion.div>
+
       {/* 1. RESPONSIVE METRICS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <MetricCard label="Total Leads" value={stats.total} icon={<Users size={18}/>} color="text-blue-600" bg="bg-blue-50" trend="+12.5%" />

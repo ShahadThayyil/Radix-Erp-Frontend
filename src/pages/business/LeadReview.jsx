@@ -1,69 +1,70 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useParams, useNavigate, useOutletContext } from 'react-router-dom'; // 1. Router hooks ചേർത്തു
+import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { 
   ArrowLeft, Phone, MapPin, 
   CheckCircle2, XCircle, User, 
   AlertTriangle, Loader2, Calendar, 
   FileText, ShieldCheck, Star, Mail, Check,
-  Briefcase, ChevronRight
+  Briefcase, ChevronRight, Info, Activity,
+  ChevronDown, MessageSquare, ClipboardCheck, History,
+  ExternalLink
 } from 'lucide-react';
 
 const LeadReview = () => {
-  const { id } = useParams(); // URL-ൽ നിന്ന് ID എടുക്കുന്നു
+  const { id } = useParams();
   const navigate = useNavigate();
   
-  // 2. BusinessHub-ൽ നിന്ന് context വഴി ഡാറ്റയും ഫങ്ക്ഷനും എടുക്കുന്നു
+  // 1. DATA SOURCE (Logic Preserved)
   const { leads, updateLeadStatus } = useOutletContext();
-
-  // 3. ID ഉപയോഗിച്ച് കറക്റ്റ് ലീഡ് കണ്ടെത്തുന്നു
   const lead = useMemo(() => leads.find(l => l.id === id), [leads, id]);
 
   const [modal, setModal] = useState({ show: false, type: '', title: '', message: '', confirmText: '', targetStatus: '' });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showAgentContact, setShowAgentContact] = useState(false);
 
-  // ഡാറ്റ ലഭ്യമല്ലെങ്കിൽ (Fallback)
   if (!lead) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-slate-400 font-bold uppercase tracking-widest">Lead Record Not Found</p>
-        <button onClick={() => navigate('/business/leads')} className="mt-4 text-indigo-600 font-bold uppercase text-xs">Back to Registry</button>
+      <div className="py-32 text-center font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="w-16 h-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6 text-slate-300 shadow-sm">
+           <Info size={32} />
+        </div>
+        <p className="text-slate-500 font-bold uppercase tracking-widest">Request Not Found</p>
+        <button onClick={() => navigate('/business/leads')} className="mt-4 text-[#007ACC] font-black uppercase text-xs hover:underline">Return to Registry</button>
       </div>
     );
   }
 
-  // --- DATA CONFIG (Preserved Logic) ---
-  const agentData = {
-    id: lead.agentId || "AG-Unknown",
-    name: lead.agentName || "System Agent",
-    rating: 4.8,
-    totalLeads: 42
-  };
-
+  // --- CONFIG (Logic Preserved) ---
   const workflowSteps = ['Verified', 'Started', 'In Progress', 'Completed'];
+  const userFriendlySteps = ['Approved', 'Kicked Off', 'Working On It', 'Finished'];
   const normalizedStatus = (lead.status === 'Verfied' || lead.status === 'Verified') ? 'Verified' : lead.status;
   const currentStepIndex = workflowSteps.indexOf(normalizedStatus);
+  const progressPercent = currentStepIndex > -1 ? ((currentStepIndex + 1) / workflowSteps.length) * 100 : 0;
+
+  // Clean phone for WhatsApp Link (removes spaces and symbols)
+  const cleanPhone = lead.clientPhone?.replace(/\D/g, '');
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Verified': case 'Verfied': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-      case 'Started': return 'bg-blue-50 text-blue-700 border-blue-100';
-      case 'In Progress': return 'bg-slate-900 text-white border-slate-900';
-      case 'Completed': return 'bg-indigo-600 text-white border-indigo-600';
-      case 'Rejected': return 'bg-red-50 text-red-700 border-red-100';
+      case 'Verified': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      case 'Started': return 'bg-blue-50 text-[#007ACC] border-blue-100';
+      case 'In Progress': return 'bg-indigo-50 text-indigo-700 border-indigo-100';
+      case 'Completed': return 'bg-[#007ACC] text-white border-[#007ACC]';
+      case 'Rejected': return 'bg-rose-50 text-rose-700 border-rose-100';
       default: return 'bg-amber-50 text-amber-700 border-amber-100';
     }
   };
 
-  // --- HANDLERS ---
+  // --- HANDLERS (Logic Preserved) ---
   const confirmAction = (type, targetStatus = '') => {
     let config = {};
     if (type === 'verify') {
-        config = { title: 'Confirm Verification', message: 'Authorize this lead and move to the project pipeline?', confirmText: 'Verify Entry', targetStatus: 'Verified' };
+        config = { title: 'Approve Request', message: 'Move this request into the active project list?', confirmText: 'Confirm Approval', targetStatus: 'Verified' };
     } else if (type === 'reject') {
-        config = { title: 'Reject Lead', message: 'Mark this lead as invalid? This operation cannot be reversed.', confirmText: 'Confirm Reject', targetStatus: 'Rejected' };
+        config = { title: 'Cancel Request', message: 'Mark this request as canceled? This cannot be reversed.', confirmText: 'Confirm Cancel', targetStatus: 'Rejected' };
     } else if (type === 'statusChange') {
-        config = { title: `Transition to ${targetStatus}`, message: `Update project lifecycle stage to "${targetStatus}"?`, confirmText: 'Execute Update', targetStatus: targetStatus };
+        config = { title: `Move to ${targetStatus}`, message: `Update the project to the "${targetStatus}" stage?`, confirmText: 'Update Progress', targetStatus: targetStatus };
     }
     setModal({ ...config, show: true, type });
   };
@@ -71,140 +72,161 @@ const LeadReview = () => {
   const executeModalAction = async () => {
     setIsProcessing(true);
     try {
-      // 4. Global state അപ്‌ഡേറ്റ് ചെയ്യുന്നു
       await updateLeadStatus(lead.id, modal.targetStatus);
       setModal(prev => ({ ...prev, show: false }));
     } catch (err) {
-      console.error("Action failed:", err);
+      console.error(err);
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-6xl mx-auto space-y-8 pb-20">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="max-w-[1400px] mx-auto space-y-6 pb-16 font-['Plus_Jakarta_Sans',sans-serif]">
       
-      {/* 1. HEADER SECTION */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-200 pb-8">
-        <div className="space-y-4">
-          <button 
-            onClick={() => navigate('/business/leads')} 
-            className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-[0.2em]"
-          >
-            <ArrowLeft size={14} /> Registry Hub
-          </button>
+      {/* 1. COMPACT HEADER */}
+      <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-3">
+          <button onClick={() => navigate('/business/leads')} className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-[#007ACC] transition-all uppercase tracking-widest"><ArrowLeft size={14} /> Back to Registry</button>
           <div className="flex items-center gap-4">
-             <h2 className="text-3xl font-bold text-slate-900 tracking-tight uppercase">Audit File</h2>
-             <span className="bg-slate-100 px-3 py-1 text-[10px] font-bold font-mono text-slate-500 uppercase tracking-widest">{lead.id}</span>
+             <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Request Details</h2>
+             <span className="bg-slate-50 border border-slate-100 px-3 py-1 text-[10px] font-black text-[#007ACC] tracking-widest rounded-lg"># {lead.id}</span>
           </div>
         </div>
-        
-        <div className={`px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] border rounded-none shadow-sm ${getStatusColor(lead.status)}`}>
-          {lead.status === 'Pending' ? 'Status: Awaiting Review' : `Stage: ${lead.status}`}
+        <div className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest border rounded-xl shadow-sm ${getStatusColor(lead.status)}`}>
+          {lead.status === 'Pending' ? 'Status: Waiting for Review' : `Stage: ${lead.status}`}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* 2. LEFT: SPECIFICATIONS */}
-        <div className="lg:col-span-8 space-y-10">
-            <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden">
-                <div className="px-8 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-indigo-600">
-                        <FileText size={18} />
-                        <h3 className="font-black text-slate-900 text-[10px] uppercase tracking-widest">Project Requirements</h3>
-                    </div>
+        {/* 2. LEFT: REQUEST DATA & TIMELINE */}
+        <div className="lg:col-span-8 space-y-6">
+            
+            {/* PROGRESS BAR SECTION */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                     <Activity size={14} className="text-[#007ACC]" /> Fulfillment Progress
+                   </h4>
+                   <span className="text-[11px] font-black text-slate-900">{progressPercent}% Done</span>
                 </div>
-                <div className="p-10 space-y-8">
+                <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-100 shadow-inner mb-6">
+                   <motion.div initial={{ width: 0 }} animate={{ width: `${progressPercent}%` }} transition={{ duration: 1.5 }} className="bg-[#007ACC] h-full rounded-full shadow-[0_0_10px_rgba(0,122,204,0.3)]" />
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                   {userFriendlySteps.map((stepLabel, i) => (
+                      <div key={i} className="text-center">
+                         <p className={`text-[8px] font-bold uppercase tracking-tighter ${i <= currentStepIndex ? 'text-[#007ACC]' : 'text-slate-300'}`}>{stepLabel}</p>
+                      </div>
+                   ))}
+                </div>
+            </div>
+
+            {/* REQUEST REQUIREMENTS */}
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/50 flex items-center gap-3">
+                    <Briefcase size={18} className="text-[#007ACC]" />
+                    <h3 className="font-black text-slate-900 text-[10px] uppercase tracking-widest">Request Summary</h3>
+                </div>
+                <div className="p-8 md:p-10 space-y-6">
                     <div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Requested Deployment</p>
-                        <h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">{lead.service}</h2>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Project Type</p>
+                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none">{lead.service}</h2>
                     </div>
-                    <div className="bg-slate-900 p-8 text-white border-l-8 border-indigo-600">
-                        <p className="text-slate-300 text-sm leading-relaxed font-medium italic">
-                            "{lead.description || "No project description logged."}"
+                    <div className="bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-100 border-l-4 border-l-[#007ACC]">
+                        <p className="text-slate-600 text-sm leading-relaxed font-medium italic">
+                            "{lead.description || "No project notes provided."}"
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden">
-                <div className="px-8 py-5 border-b border-slate-100 bg-slate-50 flex items-center gap-3 text-indigo-600">
-                    <User size={18} />
-                    <h3 className="font-black text-slate-900 text-[10px] uppercase tracking-widest">Client Identity Dossier</h3>
+            {/* CUSTOMER PROFILE WITH CONTACT ACTIONS */}
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/50 flex items-center gap-3">
+                    <User size={18} className="text-[#007ACC]" />
+                    <h3 className="font-black text-slate-900 text-[10px] uppercase tracking-widest">Customer Identity</h3>
                 </div>
-                <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div className="space-y-2">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Legal Name</label>
-                        <p className="text-xl font-bold text-slate-900 uppercase tracking-tight">{lead.clientName}</p>
+                <div className="p-8 md:p-10 space-y-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <ProfileItem label="Customer Name" value={lead.clientName} />
+                        
+                        <div className="space-y-4">
+                           <ProfileItem label="Contact Number" value={lead.clientPhone} />
+                           {/* CONTACT BUTTONS ROW */}
+                           <div className="flex flex-wrap gap-2">
+                              <a 
+                                href={`tel:${lead.clientPhone}`}
+                                className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 hover:bg-[#007ACC] hover:text-white rounded-lg transition-all text-[9px] font-black uppercase tracking-widest border border-slate-200 shadow-sm active:scale-95"
+                              >
+                                 <Phone size={12} /> Call Now
+                              </a>
+                              <a 
+                                href={`https://wa.me/${cleanPhone}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-lg transition-all text-[9px] font-black uppercase tracking-widest border border-emerald-100 shadow-sm active:scale-95"
+                              >
+                                 <MessageSquare size={12} /> WhatsApp Now
+                              </a>
+                           </div>
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Phone Extension</label>
-                        <p className="text-xl font-bold text-slate-900">{lead.clientPhone}</p>
-                    </div>
-                    <div className="md:col-span-2 space-y-4 pt-6 border-t border-slate-50">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Physical Coordinates</label>
-                        <div className="flex items-start gap-4">
-                            <MapPin size={20} className="text-indigo-600 shrink-0 mt-1" />
-                            <p className="text-sm text-slate-600 font-bold uppercase leading-relaxed tracking-wide">{lead.clientAddress}</p>
+
+                    <div className="pt-8 border-t border-slate-50 flex items-start gap-4">
+                        <MapPin size={20} className="text-[#007ACC] shrink-0 mt-1" />
+                        <div>
+                           <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Service Location</label>
+                           <p className="text-sm text-slate-600 font-bold uppercase mt-1">{lead.clientAddress}</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        {/* 3. RIGHT: AGENT & CONTROLS */}
-        <div className="lg:col-span-4 space-y-10">
-            <div className="bg-slate-900 border border-slate-800 rounded-none shadow-2xl overflow-hidden group">
-                 <div className="px-6 py-4 bg-white/5 flex items-center gap-3">
-                    <ShieldCheck size={18} className="text-indigo-400" />
-                    <h3 className="text-[10px] font-black text-white uppercase tracking-widest">Source Registry</h3>
-                </div>
-                <div className="p-8 space-y-8">
-                    <div className="flex items-center gap-6">
-                        <div className="h-16 w-16 bg-white flex items-center justify-center text-slate-900 font-black text-2xl border-b-4 border-indigo-600">
-                            {agentData.name.charAt(0)}
+        {/* 3. RIGHT: AGENT & ACTIONS */}
+        <div className="lg:col-span-4 space-y-6">
+            
+            {/* CLICKABLE AGENT CARD */}
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden transition-all hover:border-[#007ACC]">
+                 <button 
+                  onClick={() => setShowAgentContact(!showAgentContact)}
+                  className="w-full px-6 py-4 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between group"
+                 >
+                    <div className="flex items-center gap-3">
+                       <ShieldCheck size={18} className="text-[#007ACC]" />
+                       <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Referring Partner</h3>
+                    </div>
+                    <ChevronDown size={14} className={`text-slate-400 transition-transform ${showAgentContact ? 'rotate-180' : ''}`} />
+                </button>
+                <div className="p-6 space-y-6">
+                    <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center text-[#007ACC] font-black text-lg">
+                            {lead.agentName?.charAt(0) || 'A'}
                         </div>
                         <div>
-                            <h4 className="text-sm font-bold text-white uppercase tracking-tight">{agentData.name}</h4>
-                            <div className="flex items-center gap-3 text-[10px] font-bold text-slate-500 uppercase mt-1">
-                                <span>{agentData.id}</span>
-                                <div className="flex items-center gap-1 text-amber-500">
-                                    <Star size={12} fill="currentColor" /> {agentData.rating}
-                                </div>
-                            </div>
+                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">{lead.agentName || "System Partner"}</h4>
+                            <p className="text-[10px] font-bold text-[#007ACC] uppercase tracking-widest mt-0.5">ID: {lead.agentId}</p>
                         </div>
                     </div>
-                    <button className="w-full py-4 border border-white/10 text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all">Agent Record File</button>
+
+                    <AnimatePresence>
+                      {showAgentContact && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="space-y-4 pt-4 border-t border-slate-50 overflow-hidden">
+                           <ContactInfo icon={<Mail size={12}/>} label="Email Address" value={`${lead.agentId?.toLowerCase()}@radix.team`} />
+                           <ContactInfo icon={<Phone size={12}/>} label="Direct Line" value="+91 00000 00000" />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                 </div>
             </div>
 
-            {/* Lifecycle Control */}
-            <div className="bg-white border border-slate-200 rounded-none p-8 space-y-8">
+            {/* ACTION CONTROLS */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 space-y-6 shadow-sm">
                 {lead.status !== 'Pending' && lead.status !== 'Rejected' ? (
-                    <div className="space-y-8">
-                        <div className="flex items-center justify-between">
-                           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lifecycle Progression</h3>
-                           <span className="text-[10px] font-black px-2 py-1 bg-indigo-50 text-indigo-600 uppercase border border-indigo-100">
-                             {currentStepIndex > -1 ? Math.round(((currentStepIndex + 1) / workflowSteps.length) * 100) : 0}% Node Completion
-                           </span>
-                        </div>
-                        
-                        {/* Interactive Progress Map */}
-                        <div className="flex justify-between relative px-2">
-                            <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-slate-100 -translate-y-1/2" />
-                            {workflowSteps.map((step, index) => {
-                                const isCompleted = index <= currentStepIndex;
-                                return (
-                                    <div key={step} className="relative z-10">
-                                        <div className={`w-9 h-9 flex items-center justify-center border-2 transition-all duration-700 ${isCompleted ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-300'}`}>
-                                            {isCompleted ? <Check size={16} /> : <span className="text-[10px] font-bold">{index + 1}</span>}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
+                    <div className="space-y-6">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Update Request Stage</p>
                         <div className="space-y-3">
                              {['Started', 'In Progress', 'Completed'].map((stage) => {
                                 const isActive = lead.status === stage;
@@ -214,63 +236,70 @@ const LeadReview = () => {
                                         key={stage}
                                         onClick={() => confirmAction('statusChange', stage)}
                                         disabled={isActive || isPassed}
-                                        className={`w-full flex items-center justify-between px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] border transition-all ${
+                                        className={`w-full flex items-center justify-between px-5 py-3.5 text-[10px] font-black uppercase border rounded-xl transition-all ${
                                             isActive 
-                                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl' 
-                                            : 'bg-white border-slate-200 text-slate-400 hover:border-slate-900 hover:text-slate-900'
-                                        } ${isPassed ? 'opacity-20 cursor-not-allowed grayscale' : ''}`}
+                                            ? 'bg-[#007ACC] border-[#007ACC] text-white shadow-lg' 
+                                            : 'bg-white border-slate-200 text-slate-400 hover:border-[#007ACC] hover:text-[#007ACC]'
+                                        } ${isPassed ? 'opacity-30 cursor-not-allowed' : ''}`}
                                     >
-                                        {stage}
-                                        {isActive && <div className="h-2 w-2 bg-white animate-pulse" />}
+                                        {stage === 'Started' ? 'Kick Off' : stage === 'In Progress' ? 'Work On It' : 'Mark Finished'}
+                                        {isActive && <div className="h-1.5 w-1.5 bg-white rounded-full animate-pulse" />}
                                     </button>
                                 );
                              })}
                         </div>
                     </div>
                 ) : lead.status === 'Pending' && (
-                    <div className="space-y-8">
-                        <div className="text-center">
-                            <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.3em]">Authorize Entry</h3>
-                            <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase">Verify data integrity to deploy unit pipeline.</p>
-                        </div>
-                        <div className="space-y-4">
-                            <button 
-                                onClick={() => confirmAction('verify')} 
-                                className="w-full py-5 bg-slate-900 hover:bg-indigo-600 text-white text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-2xl flex items-center justify-center gap-3"
-                            >
-                                <CheckCircle2 size={18} /> Authorize Registry
-                            </button>
-                            <button 
-                                onClick={() => confirmAction('reject')} 
-                                className="w-full py-5 bg-white border border-red-200 text-red-600 hover:bg-red-50 text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3"
-                            >
-                                <XCircle size={18} /> Terminate Entry
-                            </button>
-                        </div>
+                    <div className="space-y-4">
+                        <button onClick={() => confirmAction('verify')} className="w-full py-4 bg-[#0F172A] hover:bg-[#007ACC] text-white text-[10px] font-black uppercase tracking-widest transition-all rounded-xl flex items-center justify-center gap-3 active:scale-95 shadow-lg">
+                           <CheckCircle2 size={18} /> Approve Request
+                        </button>
+                        <button onClick={() => confirmAction('reject')} className="w-full py-4 bg-white border border-rose-100 text-rose-500 hover:bg-rose-50 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl flex items-center justify-center gap-3 active:scale-95">
+                           <XCircle size={18} /> Cancel Request
+                        </button>
                     </div>
                 )}
             </div>
+
+            {/* CHECKLIST DENSITY CARD */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
+               <div className="flex items-center gap-2">
+                  <ClipboardCheck size={16} className="text-[#007ACC]" />
+                  <h4 className="text-[10px] font-black text-slate-900 uppercase">Verification Check</h4>
+               </div>
+               <div className="space-y-3">
+                  <CheckItem text="Customer identity verified" />
+                  <CheckItem text="Contact number reachable" />
+                  <CheckItem text="Service category matched" />
+               </div>
+            </div>
         </div>
       </div>
+{/* 
+      {/* 4. FOOTER */}
+      {/* <div className="pt-6 flex items-center justify-center gap-3 border-t border-slate-100 text-slate-300">
+          <History size={14} />
+          <p className="text-[9px] font-bold uppercase tracking-[0.4em]">Audit Registry Record #1092-AXV</p>
+      </div>  */}
 
-      {/* 4. MODAL PROTOCOL */}
+      {/* MODAL POPUP */}
       <AnimatePresence>
         {modal.show && (
-          <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-md">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white w-full max-w-sm rounded-none shadow-2xl overflow-hidden border border-slate-200">
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
                 <div className="p-10 text-center space-y-6">
-                    <div className={`mx-auto w-16 h-16 flex items-center justify-center border-2 ${modal.type === 'reject' ? 'border-red-100 text-red-500' : 'border-slate-100 text-slate-900'}`}>
+                    <div className={`mx-auto w-16 h-16 flex items-center justify-center border-2 rounded-2xl ${modal.type === 'reject' ? 'border-rose-100 text-rose-500' : 'border-blue-100 text-[#007ACC]'}`}>
                         {isProcessing ? <Loader2 size={32} className="animate-spin" /> : <AlertTriangle size={32} />}
                     </div>
                     <div className="space-y-2">
                         <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{modal.title}</h3>
-                        <p className="text-xs text-slate-500 leading-relaxed font-bold uppercase tracking-wider">{modal.message}</p>
+                        <p className="text-xs text-slate-500 font-bold uppercase leading-tight tracking-tight">{modal.message}</p>
                     </div>
                 </div>
                 <div className="flex border-t border-slate-100">
-                    <button onClick={() => setModal({ ...modal, show: false })} disabled={isProcessing} className="flex-1 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:bg-slate-50 transition-colors">Abort</button>
-                    <button onClick={executeModalAction} disabled={isProcessing} className={`flex-1 py-5 text-[10px] font-black text-white uppercase tracking-[0.2em] transition-all ${modal.type === 'reject' ? 'bg-red-600' : 'bg-slate-900 hover:bg-indigo-600'}`}>
-                        {isProcessing ? "Transmitting..." : "Authorize"}
+                    <button onClick={() => setModal({ ...modal, show: false })} className="flex-1 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:bg-slate-50">Go Back</button>
+                    <button onClick={executeModalAction} className={`flex-1 py-5 text-[10px] font-black text-white uppercase tracking-widest ${modal.type === 'reject' ? 'bg-rose-600' : 'bg-[#007ACC] hover:bg-[#0F172A]'}`}>
+                        {isProcessing ? "Wait..." : "Confirm"}
                     </button>
                 </div>
             </motion.div>
@@ -280,5 +309,29 @@ const LeadReview = () => {
     </motion.div>
   );
 };
+
+// --- LIGHT THEME HELPERS ---
+const ProfileItem = ({ label, value }) => (
+  <div className="space-y-1">
+     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
+     <p className="text-lg font-black text-slate-900 uppercase tracking-tight truncate">{value}</p>
+  </div>
+);
+
+const ContactInfo = ({ icon, label, value }) => (
+  <div className="flex items-center gap-3">
+     <div className="text-[#007ACC]">{icon}</div>
+     <div>
+        <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
+        <p className="text-[10px] font-black text-slate-700">{value}</p>
+     </div>
+  </div>
+);
+
+const CheckItem = ({ text }) => (
+  <div className="flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase">
+     <CheckCircle2 size={12} className="text-emerald-500" /> {text}
+  </div>
+);
 
 export default LeadReview;
