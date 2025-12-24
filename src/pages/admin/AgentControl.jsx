@@ -1,258 +1,291 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom'; // റൂട്ടിംഗിനായി ചേർത്തു
+import { useNavigate } from 'react-router-dom';
 import { 
-  Users, UserCheck, UserX, Search, 
-  Mail, Calendar, Wallet, 
-  TrendingUp, X, Shield, Filter, Download, ChevronDown,
-  BarChart3, Settings, ShieldAlert, ArrowUpRight
+  Users, Search, Mail, Wallet, X, 
+  Download, ArrowUpRight, Briefcase, 
+  ShieldCheck, Shield, UserX, UserCheck, 
+  AlertTriangle
 } from 'lucide-react';
+import Chart from 'react-apexcharts';
+
+// Data Sources
+import { initialLeads } from '../../data/leadHistoryData';
 
 const AgentControl = () => {
-  const navigate = useNavigate(); // Navigation hook
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedAgent, setSelectedAgent] = useState(null);
 
-  // 1. DATA SOURCE (Logic Preserved)
-  const [agents] = useState([
-    { id: 'A-420', name: 'Zaid Al-Farsi', email: 'zaid.f@vynx.com', joined: '2025-10-12', totalLeads: 24, balance: 1250, status: 'Active' },
-    { id: 'A-109', name: 'Suhail Ahmed', email: 'suhail.a@vynx.com', joined: '2025-11-05', totalLeads: 18, balance: 800, status: 'Active' },
-    { id: 'A-215', name: 'Omar Khan', email: 'omar.k@vynx.com', joined: '2025-11-20', totalLeads: 5, balance: 150, status: 'Restricted' },
-    { id: 'A-332', name: 'Layla Rashid', email: 'layla.r@vynx.com', joined: '2025-12-01', totalLeads: 32, balance: 4200, status: 'Active' },
-    { id: 'A-445', name: 'Priya Kapoor', email: 'priya.k@vynx.com', joined: '2025-12-10', totalLeads: 12, balance: 600, status: 'Active' },
-  ]);
+  // 1. DATA SOURCE SYNC
+  const [agents, setAgents] = useState(() => {
+    const saved = localStorage.getItem('vynx_agents');
+    const defaultAgents = [
+      { id: 'A-420', name: 'Zaid Al-Farsi', email: 'zaid.f@vynx.com', phone: '+971 50 123 4567', joined: '12 Oct 2025', status: 'Active', balance: 1250 },
+      { id: 'A-109', name: 'Suhail Ahmed', email: 'suhail.a@vynx.com', phone: '+971 50 987 6543', joined: '05 Nov 2025', status: 'Active', balance: 800 },
+      { id: 'A-215', name: 'Omar Khan', email: 'omar.k@vynx.com', phone: '+971 52 444 5555', joined: '20 Nov 2025', status: 'Active', balance: 150 },
+      { id: 'A-332', name: 'Layla Rashid', email: 'layla.r@vynx.com', phone: '+971 55 666 7777', joined: '01 Dec 2025', status: 'Active', balance: 4200 },
+    ];
+    return saved ? JSON.parse(saved) : defaultAgents;
+  });
 
-  // 2. FILTERING LOGIC
+  const leads = useMemo(() => {
+    const savedLeads = localStorage.getItem('vynx_leads');
+    return savedLeads ? JSON.parse(savedLeads) : initialLeads;
+  }, []);
+
+  // 2. REPORT & RESTRICT LOGIC
+  const reportAgentProfile = (id) => {
+    const updatedAgents = agents.map(agent => {
+      if (agent.id === id) {
+        const newStatus = agent.status === 'Active' ? 'Reported' : 'Active';
+        if (selectedAgent?.id === id) setSelectedAgent({ ...agent, status: newStatus });
+        return { ...agent, status: newStatus };
+      }
+      return agent;
+    });
+    setAgents(updatedAgents);
+    localStorage.setItem('vynx_agents', JSON.stringify(updatedAgents));
+  };
+
+  // 3. ANALYTICS (Live Reactive)
+  const chartConfigs = useMemo(() => {
+    const activeCount = agents.filter(a => a.status === 'Active').length;
+    const reportedCount = agents.filter(a => a.status === 'Reported').length;
+    const agentLeadPerformance = agents.map(agent => ({
+      x: agent.name.split(' ')[0],
+      y: leads.filter(l => l.agentName === agent.name).length
+    }));
+
+    return {
+      status: {
+        series: [activeCount, reportedCount],
+        options: {
+          chart: { id: 'status-donut', sparkline: { enabled: false } },
+          labels: ['Active Members', 'Reported'],
+          colors: ['#2563EB', '#EF4444'], 
+          legend: { position: 'bottom', fontSize: '10px', fontWeight: 700 },
+          plotOptions: { pie: { donut: { size: '70%' } } },
+          dataLabels: { enabled: false },
+          stroke: { width: 0 }
+        }
+      },
+      performance: {
+        series: [{ name: 'Total Leads', data: agentLeadPerformance.map(d => d.y) }],
+        options: {
+          chart: { id: 'performance-bar', toolbar: { show: false } },
+          colors: ['#4F46E5'],
+          plotOptions: { bar: { borderRadius: 4, columnWidth: '50%' } },
+          xaxis: { categories: agentLeadPerformance.map(d => d.x), labels: { style: { fontSize: '10px', fontWeight: 700 } } },
+          grid: { borderColor: '#F1F5F9' },
+          responsive: [{ breakpoint: 480, options: { plotOptions: { bar: { columnWidth: '80%' } } } }]
+        }
+      }
+    };
+  }, [agents, leads]);
+
+  // 4. MAIN EXPORT
+  const handleMainExport = () => {
+    const headers = ["ID", "Name", "Email", "Phone", "Status", "Earnings"];
+    const rows = agents.map(a => [a.id, a.name, a.email, a.phone, a.status, a.balance].join(","));
+    const blob = new Blob([[headers.join(","), ...rows].join("\n")], { type: 'text/csv' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Staff_Report_${new Date().toLocaleDateString()}.csv`;
+    link.click();
+  };
+
   const filteredAgents = agents.filter(a => {
-    const matchesSearch = 
-      a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      a.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase()) || a.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "All" || a.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  // 3. EXPORT FUNCTION
-  const handleExport = () => {
-    const headers = ["Agent ID", "Name", "Email", "Date Joined", "Total Leads", "Wallet Balance", "Status"];
-    const csvRows = [
-      headers.join(','), 
-      ...filteredAgents.map(agent => [
-        agent.id, `"${agent.name}"`, agent.email, agent.joined, agent.totalLeads, agent.balance, agent.status
-      ].join(','))
-    ];
-    const csvString = csvRows.join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Radix_Agents_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const agentLeads = useMemo(() => {
+    if (!selectedAgent) return [];
+    return leads.filter(l => l.agentName === selectedAgent.name);
+  }, [selectedAgent, leads]);
 
   return (
-    <div className="space-y-8 pb-20">
+    <div className="font-['Plus_Jakarta_Sans',sans-serif] space-y-5  max-w-[1600px] mx-auto ">
       
-      {/* 1. HEADER & CONTROLS */}
-      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 border-b border-slate-200 pb-8">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900 uppercase">Agent Directory</h2>
-          <p className="text-sm font-medium text-slate-500 mt-1 italic">Authorized personnel and performance tracking logs.</p>
+      {/* HEADER SECTION */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+           <div className="h-10 w-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 border border-blue-100 shrink-0">
+              <Users size={20} />
+           </div>
+           <div>
+              <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-none">Team Directory</h2>
+              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1.5">
+                <ShieldCheck size={10} className="text-blue-500" /> Active Management System
+              </p>
+           </div>
         </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="bg-white border border-slate-200 px-4 py-2.5 flex items-center gap-3 w-full md:w-72 focus-within:border-indigo-600 transition-all">
-            <Search size={16} className="text-slate-400" />
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="bg-slate-50 border border-slate-100 px-3 py-2 rounded-lg flex items-center gap-3 flex-1 md:w-64">
+            <Search size={14} className="text-slate-400" />
             <input 
-              type="text" 
-              placeholder="Search ID or Name..." 
-              className="bg-transparent outline-none text-xs font-semibold w-full text-slate-900 uppercase placeholder:text-slate-300"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              type="text" placeholder="SEARCH STAFF..." 
+              className="bg-transparent outline-none text-[9px] font-black uppercase tracking-widest w-full text-slate-900 placeholder:text-slate-300"
+              value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
-          <div className="relative">
-            <div className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 cursor-pointer hover:bg-slate-50">
-              <Filter size={16} className="text-indigo-600" />
-              <select 
-                className="bg-transparent text-[10px] font-bold uppercase tracking-widest text-slate-700 outline-none cursor-pointer appearance-none pr-8"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="All">All Network Nodes</option>
-                <option value="Active">Active Units</option>
-                <option value="Restricted">Restricted Access</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            </div>
-          </div>
-
-          <button 
-            onClick={handleExport}
-            className="bg-slate-900 hover:bg-indigo-600 text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-2"
-          >
-            <Download size={14} /> Export CSV
+          <button onClick={handleMainExport} className="bg-blue-600 hover:bg-slate-900 text-white p-2.5 rounded-lg shadow-md transition-all active:scale-95 shrink-0">
+             <Download size={16}/>
           </button>
+        </div>
+      </motion.div>
+
+      {/* ANALYTICS SUITE */}
+      <div className="grid grid-cols-12 gap-5">
+        <div className="col-span-12 lg:col-span-8">
+           <ChartCard title="Lead Performance" subtitle="Ranking of leads generated by each member">
+              <Chart options={chartConfigs.performance.options} series={chartConfigs.performance.series} type="bar" height={220} />
+           </ChartCard>
+        </div>
+        <div className="col-span-12 lg:col-span-4">
+           <ChartCard title="Security Status" subtitle="Active vs Reported accounts">
+              <div className="flex justify-center">
+                <Chart options={chartConfigs.status.options} series={chartConfigs.status.series} type="donut" width="100%" height={220} />
+              </div>
+           </ChartCard>
         </div>
       </div>
 
-      {/* 2. AGENT GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredAgents.length > 0 ? (
-          filteredAgents.map((agent) => (
+      {/* AGENT GRID */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <AnimatePresence>
+          {filteredAgents.map((agent, idx) => (
             <motion.div 
-              layout
-              key={agent.id} 
-              className="bg-white border border-slate-200 p-6 relative group hover:border-indigo-600 transition-all shadow-sm"
+              layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.03 }}
+              key={agent.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:border-blue-500 transition-all group relative shadow-sm"
             >
-              <div className={`absolute top-0 right-0 px-3 py-1 text-[9px] font-bold uppercase border-l border-b ${
-                agent.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'
+              <div className={`absolute top-3 right-3 px-2 py-0.5 text-[7px] font-black uppercase rounded border ${
+                agent.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'
               }`}>
                 {agent.status}
               </div>
 
-              <div className="flex items-center gap-5 mb-8 pt-2">
-                <div className="h-14 w-14 bg-slate-900 flex items-center justify-center text-white font-bold text-xl border-b-2 border-indigo-600">
-                  {agent.name.split(' ').map(n => n[0]).join('')}
-                </div>
-                <div>
-                  <h4 className="text-base font-bold text-slate-900 uppercase tracking-tight mb-1">{agent.name}</h4>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: <span className="text-indigo-600 font-mono">{agent.id}</span></p>
-                </div>
+              <div className="flex flex-col items-center text-center mb-4">
+                  <div className="h-14 w-14 bg-slate-900 text-white rounded-xl flex items-center justify-center font-black text-xl mb-3 shadow-md group-hover:bg-blue-600 transition-colors">
+                      {agent.name.charAt(0)}
+                  </div>
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight">{agent.name}</h3>
+                  <p className="text-[8px] text-slate-400 font-bold mt-0.5 uppercase tracking-widest">ID: {agent.id}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-px bg-slate-200 border border-slate-200 mb-8">
-                <div className="bg-slate-50 p-4">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Leads</p>
-                  <div className="flex items-center gap-2">
-                    <TrendingUp size={16} className="text-emerald-600" />
-                    <p className="text-xl font-bold text-slate-900">{agent.totalLeads}</p>
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
+                      <p className="text-[7px] text-slate-400 font-black uppercase mb-0.5">Leads</p>
+                      <p className="text-xs font-black text-slate-900">{leads.filter(l => l.agentName === agent.name).length}</p>
                   </div>
-                </div>
-                <div className="bg-slate-50 p-4">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Balance</p>
-                  <div className="flex items-center gap-2">
-                    <Wallet size={16} className="text-indigo-600" />
-                    <p className="text-xl font-bold text-slate-900">₹{agent.balance}</p>
+                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
+                      <p className="text-[7px] text-slate-400 font-black uppercase mb-0.5">Wallet</p>
+                      <p className="text-xs font-black text-blue-600">₹{agent.balance}</p>
                   </div>
-                </div>
               </div>
 
-              <div className="flex gap-2">
-                <button 
+              <button 
                   onClick={() => setSelectedAgent(agent)}
-                  className="flex-1 py-3 bg-white border border-slate-200 text-[10px] font-bold text-slate-600 uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all"
-                >
-                  Analyze Node
-                </button>
-                <button className="p-3 bg-slate-50 text-slate-400 border border-slate-200 hover:bg-red-50 hover:text-red-600 transition-all">
-                  <UserX size={16} />
-                </button>
-              </div>
+                  className="w-full py-2.5 bg-white border border-slate-200 text-slate-600 hover:border-blue-600 hover:text-blue-600 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm"
+              >
+                  <ArrowUpRight size={12}/> Profile Details
+              </button>
             </motion.div>
-          ))
-        ) : (
-          <div className="col-span-full py-32 text-center bg-white border border-dashed border-slate-200">
-             <Users size={48} className="text-slate-100 mx-auto mb-4" />
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">No registry matches found.</p>
-          </div>
-        )}
+          ))}
+        </AnimatePresence>
       </div>
 
-      {/* 3. DETAIL DRAWER */}
+      {/* MODAL DOSSIER */}
       <AnimatePresence>
         {selectedAgent && (
-          <div className="fixed inset-0 z-[100] flex justify-end">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-              onClick={() => setSelectedAgent(null)} 
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
-            />
-            <motion.div 
-              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-              transition={{ type: 'tween', duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="bg-white w-full max-w-md h-full relative shadow-2xl border-l border-slate-200 flex flex-col"
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/20 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white w-full max-w-4xl max-h-[90vh] rounded-xl shadow-2xl overflow-hidden flex flex-col border border-slate-200"
             >
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-slate-400">Registry_Inspector</span>
-                <button onClick={() => setSelectedAgent(null)} className="p-2 text-slate-400 hover:text-slate-900">
-                  <X size={20}/>
+              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-blue-50/50">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 md:h-12 md:w-12 bg-slate-900 text-white rounded-lg flex items-center justify-center font-black text-lg md:text-xl shadow-md shrink-0">
+                    {selectedAgent.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="text-base md:text-lg font-black text-slate-900 uppercase tracking-tighter leading-none">{selectedAgent.name}</h3>
+                    <p className="text-[8px] md:text-[9px] font-bold text-blue-600 uppercase tracking-widest mt-1">{selectedAgent.id}</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedAgent(null)} className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-red-50 hover:text-red-500 transition-all shadow-sm">
+                  <X size={18}/>
                 </button>
               </div>
-              
-              <div className="flex-1 overflow-y-auto p-10 space-y-12">
-                <div className="text-center space-y-4">
-                   <div className="h-24 w-24 bg-slate-900 flex items-center justify-center text-white font-bold text-3xl mx-auto border-b-4 border-indigo-600">
-                     {selectedAgent.name[0]}
-                   </div>
-                   <div>
-                     <h3 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">{selectedAgent.name}</h3>
-                     <div className="flex items-center justify-center gap-3 mt-3">
-                        <span className="bg-slate-100 text-slate-600 px-3 py-1 text-[10px] font-bold font-mono tracking-widest">{selectedAgent.id}</span>
-                        <span className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${selectedAgent.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                            {selectedAgent.status}
-                        </span>
-                     </div>
-                   </div>
-                </div>
 
-                <div className="space-y-10">
-                  <section className="space-y-4">
-                    <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-3">Contact Data</h5>
-                    <div className="space-y-3">
-                       <div className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-100">
-                         <Mail size={18} className="text-indigo-600"/>
-                         <div>
-                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Email</p>
-                             <p className="text-sm font-semibold text-slate-900">{selectedAgent.email}</p>
+              <div className="flex-1 overflow-y-auto p-5 md:p-8 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-6">
+                      <section className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                        <h5 className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
+                            <Mail size={12}/> Personal Details
+                        </h5>
+                        <div className="space-y-3">
+                           <InfoItem label="Email" value={selectedAgent.email} />
+                           <InfoItem label="Phone" value={selectedAgent.phone} />
+                           <InfoItem label="Joined" value={selectedAgent.joined} />
+                        </div>
+                      </section>
+
+                      <section className={`p-5 rounded-xl border ${selectedAgent.status === 'Active' ? 'bg-slate-50 border-slate-200' : 'bg-red-50 border-red-100'}`}>
+                         <div className="flex items-center gap-3 mb-4">
+                            <AlertTriangle size={16} className={selectedAgent.status === 'Active' ? 'text-slate-600' : 'text-red-600'}/>
+                            <p className={`text-[9px] font-black uppercase tracking-widest ${selectedAgent.status === 'Active' ? 'text-slate-600' : 'text-red-600'}`}>Security Controls</p>
                          </div>
-                       </div>
-                       <div className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-100">
-                         <Calendar size={18} className="text-indigo-600"/>
-                         <div>
-                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Joined</p>
-                             <p className="text-sm font-semibold text-slate-900">{selectedAgent.joined}</p>
-                         </div>
-                       </div>
+                         <button 
+                          onClick={() => reportAgentProfile(selectedAgent.id)}
+                          className={`w-full py-3 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 ${
+                            selectedAgent.status === 'Active' 
+                              ? 'bg-red-600 text-white hover:bg-red-700' 
+                              : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                          }`}
+                         >
+                           {selectedAgent.status === 'Active' ? <UserX size={14}/> : <UserCheck size={14}/>}
+                           {selectedAgent.status === 'Active' ? 'Restrict Profile' : 'Restore Access'}
+                         </button>
+                      </section>
                     </div>
-                  </section>
 
-                  <section className="space-y-4">
-                    <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-3">Financial Ledger</h5>
-                    <div className="p-8 bg-slate-900 text-white relative overflow-hidden">
-                       <div className="relative z-10 flex justify-between items-center">
-                           <div className="space-y-1">
-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Liquid Assets</p>
-                             <p className="text-4xl font-bold tracking-tighter">₹{selectedAgent.balance.toLocaleString()}</p>
-                           </div>
-                           <Wallet size={24} className="text-indigo-400"/>
-                       </div>
-                       {/* Navigate to Credits page */}
-                       <button 
-                        onClick={() => navigate('/admin/credits')}
-                        className="w-full mt-8 py-3 bg-white text-slate-900 text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2"
-                       >
-                           Manage Settlements <ArrowUpRight size={14}/>
-                       </button>
-                       <Shield size={120} className="absolute -bottom-10 -right-10 text-white/[0.03] rotate-12" />
-                    </div>
-                  </section>
+                    <div className="space-y-6">
+                      <section className="p-5 bg-blue-600 rounded-xl text-white shadow-xl shadow-blue-100 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12"><Wallet size={100} /></div>
+                        <p className="text-[9px] font-black text-blue-200 uppercase tracking-widest mb-1">Total Commission</p>
+                        <h4 className="text-2xl md:text-3xl font-black text-white tracking-tighter mb-8">₹{selectedAgent.balance?.toLocaleString() || '0'}</h4>
+                        <button onClick={() => navigate('/admin/credits')} className="w-full relative z-10 py-2.5 bg-white text-blue-600 rounded-lg text-[8px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all">
+                            Settlement Details
+                        </button>
+                      </section>
 
-                  <section className="space-y-4 pb-10">
-                    <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-3">Security</h5>
-                    <div className="grid grid-cols-2 gap-4">
-                       <button className="py-4 border border-slate-200 text-red-600 text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 transition-all flex flex-col items-center gap-2">
-                         <UserX size={20} /> Restrict
-                       </button>
-                       <button className="py-4 border border-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all flex flex-col items-center gap-2">
-                         <ShieldAlert size={20} /> Reset
-                       </button>
+                      <section className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex-1 overflow-hidden">
+                        <h5 className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
+                            <Briefcase size={12} className="text-blue-600"/> Customers ({agentLeads.length})
+                        </h5>
+                        <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                          {agentLeads.length > 0 ? agentLeads.map((l, i) => (
+                            <div key={i} className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg flex justify-between items-center">
+                               <p className="text-[10px] font-black text-slate-900 uppercase">{l.clientName}</p>
+                               <div className="text-right px-2 py-0.5 rounded bg-white border border-slate-100">
+                                  <p className="text-[7px] font-black text-blue-600 uppercase">{l.status}</p>
+                               </div>
+                            </div>
+                          )) : <p className="text-[9px] text-slate-400 italic py-4 text-center">No customers</p>}
+                        </div>
+                      </section>
                     </div>
-                  </section>
                 </div>
+              </div>
+
+              <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-end">
+                  <button onClick={() => setSelectedAgent(null)} className="w-full md:w-auto px-10 py-3 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg active:scale-95">
+                    Close HUB
+                  </button>
               </div>
             </motion.div>
           </div>
@@ -261,5 +294,23 @@ const AgentControl = () => {
     </div>
   );
 };
+
+// HELPER COMPONENTS
+const ChartCard = ({ title, subtitle, children }) => (
+  <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col h-full relative group">
+    <div className="mb-4">
+      <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{title}</h4>
+      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{subtitle}</p>
+    </div>
+    <div className="w-full flex-1">{children}</div>
+  </div>
+);
+
+const InfoItem = ({ label, value }) => (
+  <div className="flex justify-between items-end border-b border-slate-50 pb-1.5">
+    <span className="text-[8px] text-slate-400 font-black uppercase">{label}</span>
+    <span className="text-[10px] font-black text-slate-900 uppercase tracking-tight truncate ml-4">{value}</span>
+  </div>
+);
 
 export default AgentControl;

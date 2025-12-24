@@ -4,12 +4,12 @@ import {
   NavLink, 
   Outlet, 
   useLocation, 
-  useNavigate 
+  useNavigate // Keep this, remove 'navigate'
 } from 'react-router-dom';
 import { 
   LayoutDashboard, Building2, Users, 
   CreditCard, PieChart, LogOut, Bell,
-  ArrowRight, Wallet, X, AlertCircle, Sparkles, ShieldCheck, Clock
+  ArrowRight, Wallet, X, AlertCircle, Sparkles, ShieldCheck, Clock, CheckCheck
 } from 'lucide-react';
 
 import { initialLeads } from '../../data/leadHistoryData';
@@ -27,12 +27,49 @@ const AdminHub = ({ onLogout }) => {
     return saved ? JSON.parse(saved) : initialLeads;
   });
 
-  const withdrawalRequests = [
-    { id: 'W-901', agent: 'Zaid Al-Farsi', amount: 500, time: '10m ago' },
-    { id: 'W-905', agent: 'Suhail Ahmed', amount: 1200, time: '1h ago' }
-  ];
+  // --- UPDATED NOTIFICATION DATA ---
+  const [notifications, setNotifications] = useState([
+    { 
+      id: 1, 
+      type: 'agent', 
+      title: 'New Agent Joined', 
+      message: 'Rahul Sharma registered as a partner.', 
+      time: '5m ago', 
+      path: '/admin/agents',
+      icon: <Users size={16} />
+    },
+    { 
+      id: 2, 
+      type: 'payment', 
+      title: 'Pending Payout', 
+      message: 'Zaid Al-Farsi requested ₹5,000.', 
+      time: '1h ago', 
+      path: '/admin/credits',
+      icon: <Wallet size={16} />
+    },
+    { 
+      id: 3, 
+      type: 'credit', 
+      title: 'Low Credit Alert', 
+      message: 'Unit #402 is running low on credits.', 
+      time: '3h ago', 
+      path: '/admin/units',
+      icon: <CreditCard size={16} />
+    }
+  ]);
 
-  const totalNotifications = withdrawalRequests.length;
+  const totalNotifications = notifications.length;
+
+  const handleClearNotifications = (e) => {
+    e.stopPropagation();
+    setNotifications([]);
+  };
+
+  const handleNotificationClick = (path) => {
+    navigate(path);
+    setShowNotifications(false);
+  };
+  // ---------------------------------
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -89,7 +126,6 @@ const AdminHub = ({ onLogout }) => {
                     <item.icon size={19} strokeWidth={isActive ? 2.5 : 2} />
                     <span>{item.label}</span>
                     
-                    {/* ACTIVE INDICATOR (Right Side - Matches Screenshot) */}
                     {isActive && (
                       <motion.div 
                         layoutId="sidebar-active-line"
@@ -104,16 +140,16 @@ const AdminHub = ({ onLogout }) => {
           </nav>
         </div>
 
-        {/* FOOTER AREA - FIXED AT BOTTOM */}
+        {/* FOOTER AREA */}
         <div className="mt-auto p-6 space-y-6 bg-white border-t border-slate-50">
           <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
-             <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
                 <div className="h-8 w-8 bg-white border border-slate-200 flex items-center justify-center rounded-lg text-[#007ACC] font-black text-xs shadow-sm italic">i</div>
                 <div>
                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Admin Access</p>
                    <h5 className="text-[11px] font-black text-slate-900 uppercase">Control Center</h5>
                 </div>
-             </div>
+              </div>
           </div>
 
           <button 
@@ -129,7 +165,7 @@ const AdminHub = ({ onLogout }) => {
       <main className="flex-1 flex flex-col min-w-0 relative">
         <header className="h-20 flex items-center justify-between px-6 lg:px-12 sticky top-0 bg-[#F8FAFC]/80 backdrop-blur-md z-20">
           <div className="flex items-center gap-4">
-             <span className="text-[10px] font-black text-[#007ACC] uppercase tracking-[0.2em]">Dashboard</span>
+              <span className="text-[10px] font-black text-[#007ACC] uppercase tracking-[0.2em]">Dashboard</span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -156,20 +192,53 @@ const AdminHub = ({ onLogout }) => {
                   >
                     <div className="p-6 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
                       <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Updates</h4>
-                      <span className="text-[9px] font-black text-[#007ACC] uppercase bg-white px-3 py-1 border border-blue-100 rounded-lg">{totalNotifications} Notifications</span>
+                      {totalNotifications > 0 && (
+                        <button 
+                          onClick={handleClearNotifications}
+                          className="text-[9px] font-black text-rose-500 uppercase hover:underline flex items-center gap-1"
+                        >
+                          <CheckCheck size={12} /> Clear All
+                        </button>
+                      )}
                     </div>
+
                     <div className="max-h-[350px] overflow-y-auto">
-                      {withdrawalRequests.map(req => (
-                        <div key={req.id} className="p-5 flex items-start gap-4 hover:bg-slate-50 transition-colors border-b border-slate-50 cursor-pointer" onClick={() => setShowNotifications(false)}>
-                           <div className="h-10 w-10 bg-blue-50 text-[#007ACC] flex items-center justify-center rounded-xl shrink-0"><Wallet size={18}/></div>
-                           <div>
-                              <p className="text-[9px] font-bold text-slate-400 uppercase">{req.time}</p>
-                              <h6 className="text-xs font-black text-slate-900 uppercase">Payout Request: ₹{req.amount}</h6>
+                      {notifications.length > 0 ? (
+                        notifications.map(req => (
+                          <div 
+                            key={req.id} 
+                            className="p-5 flex items-start gap-4 hover:bg-blue-50/50 transition-colors border-b border-slate-50 cursor-pointer group" 
+                            onClick={() => handleNotificationClick(req.path)}
+                          >
+                             <div className="h-10 w-10 bg-white border border-slate-100 text-[#007ACC] flex items-center justify-center rounded-xl shrink-0 shadow-sm group-hover:border-blue-200 transition-colors">
+                                {req.icon}
+                             </div>
+                             <div className="flex-1">
+                                <div className="flex justify-between items-start mb-1">
+                                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{req.time}</p>
+                                  <ArrowRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0"/>
+                                </div>
+                                <h6 className="text-xs font-black text-slate-900 uppercase leading-tight mb-1">{req.title}</h6>
+                                <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{req.message}</p>
+                             </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-10 text-center space-y-2">
+                           <div className="h-12 w-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300">
+                              <Bell size={20} />
                            </div>
+                           <p className="text-[10px] font-black text-slate-400 uppercase">No New Notifications</p>
                         </div>
-                      ))}
+                      )}
                     </div>
-                    <button onClick={() => setShowNotifications(false)} className="w-full py-4 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#007ACC] transition-all">Close</button>
+                    
+                    <button 
+                      onClick={() => setShowNotifications(false)} 
+                      className="w-full py-4 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#007ACC] transition-all"
+                    >
+                      Close Panel
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -177,15 +246,14 @@ const AdminHub = ({ onLogout }) => {
           </div>
         </header>
 
-        {/* Main Content Area scrolls while Sidebar stays */}
-        <div className="p-6 lg:p-12 max-w-[1600px] w-full mx-auto pb-32">
+        <div className="py-3 px-3 max-w-[1600px] w-full mx-auto pb-24 lg:pb-12">
           <motion.div key={location.pathname} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             <Outlet />
           </motion.div>
         </div>
       </main>
 
-      {/* 3. MOBILE BOTTOM NAVIGATION */}
+      {/* MOBILE BOTTOM NAVIGATION - (UNCHANGED) */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-between items-center px-2 py-3 z-40 shadow-[0_-8px_30px_rgba(0,0,0,0.06)]">
         {menuItems.map((item) => (
           <NavLink 
@@ -215,16 +283,16 @@ const AdminHub = ({ onLogout }) => {
         </button>
       </nav>
 
-      {/* 4. SIGN OUT MODAL */}
+      {/* SIGN OUT MODAL - (UNCHANGED) */}
       <AnimatePresence>
         {showLogoutConfirm && (
           <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 bg-slate-900/70 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-sm rounded-[2rem] p-10 shadow-2xl border border-slate-100 text-center space-y-10">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-sm rounded-[1rem] p-10 shadow-2xl border border-slate-100 text-center space-y-10">
               <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-[2rem] flex items-center justify-center mx-auto border border-rose-100 shadow-sm">
                 <AlertCircle size={40} />
               </div>
               <div className="space-y-3">
-                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none">Confirm Exit?</h3>
+                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none">Confirm Sign Out?</h3>
                 <p className="text-sm text-slate-500 font-medium px-4 leading-relaxed font-sans">End your secure session on the Radix management portal.</p>
               </div>
               <div className="grid grid-cols-2 gap-4 font-sans">

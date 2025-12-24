@@ -1,348 +1,391 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, Download, User, Building2, Calendar, 
-  MoreHorizontal, ChevronDown, ArrowUpDown, X, 
-  Activity, FileText, Phone, MapPin, UserCheck
+  ChevronDown, X, Activity, Phone, MapPin, 
+  UserCheck, Sparkles, BarChart3, LayoutGrid, Globe, Info, Briefcase, Mail, ChevronRight
 } from 'lucide-react';
+import Chart from 'react-apexcharts';
 
-// Import your initial data
+// Data Sources
 import { initialLeads } from '../../data/leadHistoryData';
 
 const MasterLeadTracker = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedLead, setSelectedLead] = useState(null);
+  const [showAgentContact, setShowAgentContact] = useState(false);
 
-  // 1. DATA SOURCE: Linked to LocalStorage for cross-dashboard syncing
+  // 1. DATA SOURCE
   const [leads, setLeads] = useState(() => {
     const saved = localStorage.getItem('vynx_leads');
-    // Returns saved data if it exists, otherwise falls back to initialLeads
     return saved ? JSON.parse(saved) : initialLeads;
   });
 
-  // 2. REFRESH LOGIC: Sync data if changed in other parts of the app
   useEffect(() => {
     const handleStorageChange = () => {
       const saved = localStorage.getItem('vynx_leads');
       if (saved) setLeads(JSON.parse(saved));
     };
-
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // 2. FILTERING LOGIC (Kept exactly the same)
-  const filteredLeads = leads.filter(lead => {
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = 
-        lead.clientName.toLowerCase().includes(searchLower) || 
-        lead.id.toLowerCase().includes(searchLower) ||
-        (lead.agentName && lead.agentName.toLowerCase().includes(searchLower)) || 
-        (lead.agentId && lead.agentId.toLowerCase().includes(searchLower)) ||
-        lead.businessUnit.toLowerCase().includes(searchLower);
+  // Reset agent contact view when lead changes
+  useEffect(() => {
+    setShowAgentContact(false);
+  }, [selectedLead]);
 
-    const matchesStatus = statusFilter === "All" || lead.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // 2. FILTERING LOGIC
+  const filteredLeads = useMemo(() => {
+    return leads.filter(lead => {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+          lead.clientName.toLowerCase().includes(searchLower) || 
+          lead.id.toLowerCase().includes(searchLower) ||
+          (lead.agentName && lead.agentName.toLowerCase().includes(searchLower)) || 
+          lead.businessUnit.toLowerCase().includes(searchLower);
 
-  // 3. EXPORT FUNCTION (CSV/Excel Logic - Kept exactly the same)
+      const matchesStatus = statusFilter === "All" || lead.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [leads, searchTerm, statusFilter]);
+
+  // 3. CHART CONFIGS (Blue/Indigo Theme)
+  const chartConfigs = useMemo(() => {
+    const statusCounts = filteredLeads.reduce((acc, lead) => {
+      acc[lead.status] = (acc[lead.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const unitActivity = filteredLeads.reduce((acc, lead) => {
+      acc[lead.businessUnit] = (acc[lead.businessUnit] || 0) + 1;
+      return acc;
+    }, {});
+
+    const dailyCounts = filteredLeads.reduce((acc, lead) => {
+      acc[lead.date] = (acc[lead.date] || 0) + 1;
+      return acc;
+    }, {});
+    const sortedDates = Object.keys(dailyCounts).sort().slice(-10);
+
+    return {
+      trend: {
+        series: [{ name: 'Total Leads', data: sortedDates.map(d => dailyCounts[d]) }],
+        options: {
+          chart: { type: 'area', toolbar: { show: false } },
+          colors: ['#4F46E5'], // Vynx Indigo
+          stroke: { curve: 'smooth', width: 2 },
+          xaxis: { categories: sortedDates.map(d => d.split('-').slice(1).join('/')), labels: { style: { fontSize: '10px' } } },
+          dataLabels: { enabled: false },
+        }
+      },
+      status: {
+        series: Object.values(statusCounts),
+        options: {
+          labels: Object.keys(statusCounts),
+          colors: ['#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#4F46E5'],
+          legend: { position: 'bottom', fontFamily: 'Plus Jakarta Sans' },
+        }
+      },
+      performance: {
+        series: [{ name: 'Lead Count', data: Object.values(unitActivity).slice(0, 7) }],
+        options: {
+          chart: { toolbar: { show: false } },
+          colors: ['#2563EB'], // Vynx Blue
+          plotOptions: { bar: { borderRadius: 4, columnWidth: '40%' } },
+          xaxis: { categories: Object.keys(unitActivity).slice(0, 7).map(u => u.split(' ')[0]) }
+        }
+      }
+    };
+  }, [filteredLeads]);
+
   const handleExport = () => {
-    const headers = [
-      "Lead ID", "Client Name", "Phone", "Address", 
-      "Business Unit", "Service", "Description", 
-      "Status", "Date", "Agent Name", "Agent ID"
-    ];
-
-    const csvRows = [
-      headers.join(','), 
-      ...filteredLeads.map(lead => {
-        const row = [
-          lead.id,
-          `"${lead.clientName}"`,
-          `"${lead.clientPhone || ''}"`,
-          `"${lead.clientAddress || ''}"`,
-          `"${lead.businessUnit}"`,
-          `"${lead.service}"`,
-          `"${(lead.description || '').replace(/(\r\n|\n|\r)/gm, " ")}"`, 
-          lead.status,
-          lead.date,
-          `"${lead.agentName || 'N/A'}"`,
-          `"${lead.agentId || 'N/A'}"`
-        ];
-        return row.join(',');
-      })
-    ];
-
-    const csvString = csvRows.join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv' });
+    const headers = ["ID", "Customer", "Unit", "Status", "Date"];
+    const rows = filteredLeads.map(l => [l.id, l.clientName, l.businessUnit, l.status, l.date].join(','));
+    const blob = new Blob([[headers.join(','), ...rows].join('\n')], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Vynx_Leads_Export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'Vynx_Master_Report.csv'; a.click();
   };
 
   const statusStyles = {
-    Pending: "bg-amber-50 text-amber-700 border-amber-200",
-    Verified: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    Started: "bg-blue-50 text-blue-700 border-blue-200",
-    "In Progress": "bg-indigo-50 text-indigo-700 border-indigo-200",
-    Completed: "bg-purple-50 text-purple-700 border-purple-200",
+    Pending: "bg-amber-50 text-amber-700 border-amber-100",
+    Verified: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    Started: "bg-blue-50 text-blue-700 border-blue-100",
+    "In Progress": "bg-indigo-50 text-indigo-700 border-indigo-100",
+    Completed: "bg-blue-50 text-blue-800 border-blue-200", // Fixed Purple to Blue
   };
 
   return (
-    <div className="animate-in fade-in duration-500 space-y-6">
+    <div className="font-['Plus_Jakarta_Sans',sans-serif] space-y-6 max-w-[1600px] mx-auto  md:px-0">
       
-      {/* 1. TOP CONTROL BAR */}
-      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 border-b border-gray-200 pb-6">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Activity className="text-indigo-600" size={24} /> Master Lead Repository
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">Cross-unit transaction monitoring & audit</p>
+      {/* 1. HEADER SECTION */}
+      <motion.div 
+        initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+        className="bg-white border border-slate-200 p-4 md:p-6 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+      >
+        <div className="flex items-center gap-4">
+           <div className="h-12 w-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 border border-indigo-100 shrink-0">
+              <Sparkles size={24} />
+           </div>
+           <div>
+              <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">Main Lead Tracker</h2>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1.5">
+                <Activity size={12} className="text-emerald-500" /> Active Business Overview
+              </p>
+           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="bg-white border border-gray-200 px-3 py-2 rounded-lg flex items-center gap-3 w-full md:w-80 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="bg-slate-50 border border-slate-100 px-4 py-2.5 rounded-xl flex items-center gap-3 flex-1 md:w-80 transition-all focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-100">
             <Search size={16} className="text-slate-400" />
             <input 
-              type="text" 
-              placeholder="Search Lead, Agent, Client..." 
-              className="bg-transparent outline-none text-sm font-medium w-full text-slate-900 placeholder:text-slate-400"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              type="text" placeholder="SEARCH CUSTOMERS OR LEADS..." 
+              className="bg-transparent outline-none text-[10px] font-black uppercase tracking-widest w-full text-slate-900 placeholder:text-slate-400"
+              value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
-          <div className="relative group">
-            <div className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-2 rounded-lg cursor-pointer shadow-sm hover:bg-gray-50 transition-colors">
-              <Filter size={16} className="text-slate-500" />
-              <select 
-                className="bg-transparent text-xs font-bold uppercase tracking-wide text-slate-700 outline-none cursor-pointer appearance-none pr-6"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="All">All Status</option>
-                <option value="Pending">Pending</option>
-                <option value="Verified">Verified</option>
-                <option value="Started">Started</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            </div>
-          </div>
-
-          <button 
-            onClick={handleExport}
-            className="p-2 bg-white border border-gray-200 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm group"
-            title="Download CSV"
-          >
+          <button onClick={handleExport} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-95 shadow-sm flex justify-center">
             <Download size={18} />
           </button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* 2. MAIN DATA GRID */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
-            <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Ref ID</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Client Details</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned Unit</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Sourced By (Agent)</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Audit</th>
-                </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-                {filteredLeads.length > 0 ? (
-                filteredLeads.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-gray-50 transition-colors group">
-                    <td className="px-6 py-4">
-                        <span className="font-mono text-xs text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
-                        {lead.id}
-                        </span>
-                        <div className="text-[10px] text-slate-400 mt-1">{lead.date}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 border border-slate-200 shrink-0">
-                            <User size={15}/>
-                        </div>
-                        <div>
-                            <p className="text-sm font-bold text-slate-900">{lead.clientName}</p>
-                            <p className="text-xs text-slate-500 font-medium flex items-center gap-1">
-                                <Phone size={10} /> {lead.clientPhone || 'N/A'}
-                            </p>
-                        </div>
-                        </div>
-                    </td>
-                    <td className="px-6 py-4">
-                        <div>
-                            <span className="text-xs font-bold text-slate-700 block">{lead.businessUnit}</span>
-                            <span className="text-[10px] text-slate-500 uppercase tracking-wide">{lead.service}</span>
-                        </div>
-                    </td>
-                    <td className="px-6 py-4">
-                        {lead.agentName ? (
-                            <div className="flex items-center gap-2">
-                                <div className="h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold border border-emerald-200">
-                                    {lead.agentName[0]}
-                                </div>
-                                <div>
-                                    <p className="text-xs font-bold text-slate-700">{lead.agentName}</p>
-                                    <p className="text-[10px] text-slate-400 font-mono tracking-wide">ID: {lead.agentId}</p>
-                                </div>
-                            </div>
-                        ) : (
-                            <span className="text-xs text-slate-400 italic">Direct / System</span>
-                        )}
-                    </td>
-                    <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusStyles[lead.status] || 'border-slate-200 text-slate-500 bg-slate-50'}`}>
-                        {lead.status}
-                        </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                        <button 
-                        onClick={() => setSelectedLead(lead)}
-                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-all border border-transparent hover:border-indigo-100"
-                        title="View Full Details"
-                        >
-                        <MoreHorizontal size={18} />
-                        </button>
-                    </td>
-                    </tr>
-                ))
-                ) : (
-                <tr>
-                    <td colSpan="6" className="px-6 py-20 text-center">
-                    <FileText size={40} className="mx-auto text-slate-300 mb-3" />
-                    <p className="text-sm font-medium text-slate-500">No matching leads found.</p>
-                    </td>
-                </tr>
-                )}
-            </tbody>
-            </table>
+      {/* 2. ANALYTICS SUITE */}
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12">
+          <ChartCard title="Customer Inquiry Growth" subtitle="Monitoring our daily lead intake">
+            <Chart options={chartConfigs.trend.options} series={chartConfigs.trend.series} type="area" height={280} />
+          </ChartCard>
+        </div>
+
+        <div className="col-span-12 lg:col-span-7">
+          <ChartCard title="Branch Activity" subtitle="Comparison of leads across different locations">
+            <Chart options={chartConfigs.performance.options} series={chartConfigs.performance.series} type="bar" height={240} />
+          </ChartCard>
+        </div>
+        <div className="col-span-12 lg:col-span-5">
+          <ChartCard title="Work Status" subtitle="Breakdown of leads by current progress">
+            <div className="flex justify-center pt-2">
+              <Chart options={chartConfigs.status.options} series={chartConfigs.status.series} type="donut" width="100%" height={240} />
+            </div>
+          </ChartCard>
         </div>
       </div>
 
-      {/* 3. DETAILED AUDIT DRAWER (Kept exactly the same) */}
+      {/* 3. DATA REPOSITORY TABLE - Desktop Optimized (No Fixed Internal Scroll) */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden h-auto">
+        <div className="px-5 py-4 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/20">
+           <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+             <LayoutGrid size={14} className="text-indigo-600" /> Lead Management Table
+           </h3>
+           <div className="flex items-center justify-between sm:justify-end gap-4">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{filteredLeads.length} Records found</span>
+              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                <Filter size={10} className="text-indigo-600"/>
+                <select className="bg-transparent text-[9px] font-black uppercase outline-none cursor-pointer" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="All">All Leads</option>
+                  <option value="Pending">Waiting</option>
+                  <option value="Verified">Verified</option>
+                  <option value="In Progress">Active</option>
+                  <option value="Completed">Finished</option>
+                </select>
+              </div>
+           </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[900px]">
+            <thead>
+              <tr className="bg-white">
+                <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">Reference</th>
+                <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">Customer</th>
+                <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">Branch</th>
+                <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">Assigned To</th>
+                <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center border-b border-slate-50">Status</th>
+                <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right border-b border-slate-50">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filteredLeads.map((lead) => (
+                <tr key={lead.id} className="hover:bg-indigo-50/30 transition-all group">
+                  <td className="px-6 py-4">
+                    <span className="font-mono text-[10px] text-indigo-600 font-bold bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100">
+                      {lead.id}
+                    </span>
+                    <p className="text-[8px] text-slate-400 font-bold uppercase mt-1">{lead.date}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div>
+                      <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{lead.clientName}</p>
+                      <p className="text-[9px] text-slate-400 font-bold flex items-center gap-1 mt-0.5">
+                        <Phone size={9} /> {lead.clientPhone || 'No contact'}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-[10px] font-black text-slate-700 uppercase block leading-none">{lead.businessUnit}</span>
+                    <span className="text-[8px] text-indigo-400 font-bold uppercase tracking-tight">{lead.service}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[9px] font-black text-indigo-600 uppercase">
+                        {lead.agentName ? lead.agentName[0] : 'S'}
+                      </div>
+                      <p className="text-[9px] font-black text-slate-800 uppercase">{lead.agentName || 'System'}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter border ${statusStyles[lead.status]}`}>
+                      {lead.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button onClick={() => setSelectedLead(lead)} className="px-3 py-1.5 bg-white border border-slate-200 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                      Full Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
+
+      {/* 4. USER-FRIENDLY LEAD DETAILS PANEL */}
       <AnimatePresence>
         {selectedLead && (
           <div className="fixed inset-0 z-[100] flex justify-end">
-            <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }} 
-                onClick={() => setSelectedLead(null)} 
-                className="absolute inset-0 bg-slate-900/20 backdrop-blur-[2px]" 
-            />
-            <motion.div 
-              initial={{ x: '100%' }} 
-              animate={{ x: 0 }} 
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="bg-white w-full max-w-lg h-full relative shadow-2xl border-l border-gray-200 p-8 overflow-y-auto flex flex-col"
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedLead(null)} className="absolute inset-0 bg-slate-900/10 backdrop-blur-sm" />
+            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="bg-white w-full max-w-lg h-full relative shadow-2xl border-l border-slate-100 p-6 md:p-8 flex flex-col"
             >
-              <button 
-                onClick={() => setSelectedLead(null)} 
-                className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-slate-500 hover:bg-gray-200 hover:text-slate-900 transition-colors"
-              >
+              <button onClick={() => setSelectedLead(null)} className="absolute top-6 right-6 p-2 bg-slate-50 rounded-xl text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
                 <X size={20}/>
               </button>
-              
-              <div className="space-y-8 pt-2 flex-1">
+
+              <div className="space-y-6 pt-10 flex-1 overflow-y-auto pr-1">
                 <header>
-                  <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-1">Audit Record</p>
-                  <h3 className="text-3xl font-bold text-slate-900 tracking-tight">{selectedLead.id}</h3>
-                  <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
-                      <Calendar size={12}/> Submitted on <span className="font-medium text-slate-700">{selectedLead.date}</span>
-                  </p>
+                  <div className="inline-flex items-center gap-2 px-2 py-1 bg-indigo-50 rounded border border-indigo-100 text-indigo-600 mb-3">
+                    <Info size={12}/>
+                    <span className="text-[9px] font-black uppercase tracking-widest">Customer Profile Overview</span>
+                  </div>
+                  <h3 className="text-4xl font-black text-slate-900 tracking-tighter">Case Reference #{selectedLead.id.split('-').pop()}</h3>
+                  <div className="flex items-center gap-3 mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    <Calendar size={14} className="text-indigo-500" /> Registration Date: {selectedLead.date}
+                  </div>
                 </header>
 
-                <div className="space-y-6">
-                  <section className="bg-slate-50 rounded-xl p-5 border border-slate-100">
-                    <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-slate-200 pb-2">
-                        <User size={14}/> Client Profile
+                <div className="space-y-4">
+                  {/* CUSTOMER INFO CARD */}
+                  <section className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <h5 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
+                        <User size={14}/> Client Information
                     </h5>
-                    <div className="space-y-3">
-                       <div className="flex justify-between items-center">
-                           <span className="text-xs text-slate-500">Full Name</span>
-                           <span className="text-sm font-bold text-slate-900">{selectedLead.clientName}</span>
+                    <div className="grid grid-cols-2 gap-y-4">
+                       <div>
+                           <span className="text-[8px] text-slate-400 font-black uppercase block mb-1">Customer Name</span>
+                           <span className="text-xs font-black text-slate-900 uppercase">{selectedLead.clientName}</span>
                        </div>
-                       <div className="flex justify-between items-center">
-                           <span className="text-xs text-slate-500">Phone Number</span>
-                           <span className="text-sm font-medium text-slate-900">{selectedLead.clientPhone || 'N/A'}</span>
+                       <div>
+                           <span className="text-[8px] text-slate-400 font-black uppercase block mb-1">Contact Node</span>
+                           <span className="text-xs font-bold text-slate-900">{selectedLead.clientPhone || 'Not Shared'}</span>
                        </div>
-                       <div className="pt-2 border-t border-slate-200 mt-2">
-                           <span className="text-xs text-slate-500 block mb-1">Address / Location</span>
-                           <div className="flex items-start gap-2">
-                               <MapPin size={14} className="text-slate-400 mt-0.5 shrink-0"/>
-                               <span className="text-sm text-slate-700 leading-snug">{selectedLead.clientAddress || 'Address not provided'}</span>
+                       <div className="col-span-2 pt-2">
+                           <span className="text-[8px] text-slate-400 font-black uppercase block mb-2">Service Location</span>
+                           <div className="flex items-start gap-3 bg-indigo-50/30 p-4 rounded-xl border border-indigo-100/50">
+                               <MapPin size={16} className="text-indigo-500 shrink-0 mt-0.5"/>
+                               <span className="text-[10px] text-indigo-900 leading-relaxed font-bold uppercase">{selectedLead.clientAddress || 'Global/Online Request'}</span>
                            </div>
                        </div>
                     </div>
                   </section>
 
+                  {/* BRANCH & STATUS */}
                   <section className="grid grid-cols-2 gap-4">
-                      <div className="p-4 border border-gray-200 rounded-xl bg-white">
-                          <p className="text-xs text-slate-400 font-bold uppercase mb-1">Assigned Unit</p>
-                          <p className="text-sm font-bold text-slate-900 leading-tight">{selectedLead.businessUnit}</p>
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                        <p className="text-[8px] text-slate-400 font-black uppercase mb-2">Handling Branch</p>
+                        <div className="flex items-center gap-2">
+                           <Building2 size={12} className="text-slate-600"/>
+                           <p className="text-[10px] font-black text-slate-900 uppercase">{selectedLead.businessUnit}</p>
+                        </div>
+                    </div>
+                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                        <p className="text-[8px] text-indigo-400 font-black uppercase mb-2">Current Stage</p>
+                        <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase border shadow-sm ${statusStyles[selectedLead.status]}`}>
+                            {selectedLead.status}
+                        </span>
+                    </div>
+                  </section>
+
+                  {/* SERVICE DATA */}
+                  <section className="p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                         <Briefcase size={14} className="text-indigo-600"/>
+                         <p className="text-[9px] text-slate-400 font-black uppercase">Service Required</p>
                       </div>
-                      <div className="p-4 border border-gray-200 rounded-xl bg-white">
-                          <p className="text-xs text-slate-400 font-bold uppercase mb-1">Current Status</p>
-                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${statusStyles[selectedLead.status]}`}>
-                              {selectedLead.status}
-                          </span>
-                      </div>
-                      <div className="col-span-2 p-5 border border-gray-200 rounded-xl bg-white shadow-sm">
-                          <p className="text-xs text-slate-400 font-bold uppercase mb-2">Service Request</p>
-                          <p className="text-sm font-bold text-indigo-700 mb-2">{selectedLead.service}</p>
-                          {selectedLead.description ? (
-                              <p className="text-xs text-slate-600 italic bg-slate-50 p-3 rounded-md border border-slate-100 leading-relaxed">
-                                  "{selectedLead.description}"
-                              </p>
-                          ) : (
-                              <p className="text-xs text-slate-400 italic">No additional description provided.</p>
-                          )}
+                      <p className="text-sm font-black text-slate-900 uppercase mb-3 tracking-tight">{selectedLead.service}</p>
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 italic text-[10px] text-slate-500 font-medium leading-relaxed">
+                          "{selectedLead.description || 'Our team is currently assessing the requirements for this request.'}"
                       </div>
                   </section>
 
-                  <section className="bg-indigo-50 rounded-xl p-5 border border-indigo-100">
-                    <h5 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-indigo-200 pb-2">
-                        <UserCheck size={14}/> Sourcing Agent
-                    </h5>
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center text-indigo-600 font-bold text-lg shadow-sm border border-indigo-100">
-                            {selectedLead.agentName ? selectedLead.agentName[0] : 'S'}
-                        </div>
-                        <div>
-                            <p className="text-base font-bold text-indigo-900">
-                                {selectedLead.agentName || 'System Generated'}
-                            </p>
-                            <p className="text-xs text-indigo-600 font-mono mt-0.5 bg-white px-1.5 py-0.5 rounded inline-block border border-indigo-100">
-                                ID: {selectedLead.agentId || 'SYS-001'}
-                            </p>
-                        </div>
-                    </div>
+                  {/* INTERACTIVE AGENT CARD */}
+                  <section className="relative overflow-hidden">
+                    <motion.div 
+                      onClick={() => setShowAgentContact(!showAgentContact)}
+                      className="p-4 bg-white border border-slate-200 rounded-xl flex items-center justify-between cursor-pointer hover:border-indigo-500 transition-all shadow-sm group"
+                    >
+                       <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black text-sm shadow-indigo-200 shadow-lg">
+                              {selectedLead.agentName ? selectedLead.agentName[0] : 'S'}
+                          </div>
+                          <div>
+                              <p className="text-[10px] font-black text-slate-900 uppercase flex items-center gap-2">
+                                Case Handled By {selectedLead.agentName || 'System'}
+                                <ChevronRight size={10} className={`text-indigo-500 transition-transform ${showAgentContact ? 'rotate-90' : ''}`} />
+                              </p>
+                              <p className="text-[8px] text-slate-400 font-mono tracking-widest mt-1 uppercase">Staff Reference: {selectedLead.agentId || 'VYNX-CORE'}</p>
+                          </div>
+                       </div>
+                       <Globe size={16} className="text-slate-200 group-hover:text-indigo-400 transition-colors"/>
+                    </motion.div>
+
+                    <AnimatePresence>
+                      {showAgentContact && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="bg-indigo-50 border-x border-b border-indigo-100 rounded-b-xl overflow-hidden"
+                        >
+                          <div className="p-4 space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="h-7 w-7 bg-white rounded-md flex items-center justify-center text-indigo-600 shadow-sm">
+                                <Mail size={14} />
+                              </div>
+                              <span className="text-[10px] font-bold text-indigo-900 lowercase tracking-tight">
+                                {selectedLead.agentName?.toLowerCase().replace(' ', '.')}@vynxweb.com
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="h-7 w-7 bg-white rounded-md flex items-center justify-center text-indigo-600 shadow-sm">
+                                <Phone size={14} />
+                              </div>
+                              <span className="text-[10px] font-bold text-indigo-900">+971 00 000 0000</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </section>
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-gray-100 mt-auto">
-                  <button 
-                      onClick={() => setSelectedLead(null)} 
-                      className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold uppercase tracking-wide transition-all shadow-md"
-                  >
-                      Close Panel
-                  </button>
+              <div className="pt-6 border-t border-slate-100 mt-auto">
+                <button onClick={() => setSelectedLead(null)} className="w-full py-4 bg-indigo-600 hover:bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-lg active:scale-95 shadow-indigo-100">
+                  Return to Dashboard
+                </button>
               </div>
             </motion.div>
           </div>
@@ -351,5 +394,19 @@ const MasterLeadTracker = () => {
     </div>
   );
 };
+
+// --- CHART CARD COMPONENT ---
+const ChartCard = ({ title, subtitle, children }) => (
+  <motion.div 
+    initial={{ opacity: 0 }} whileInView={{ opacity: 1 }}
+    className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-full"
+  >
+    <div className="mb-6">
+      <h4 className="text-xs font-black text-slate-900 uppercase tracking-tight">{title}</h4>
+      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{subtitle}</p>
+    </div>
+    <div className="w-full flex-1">{children}</div>
+  </motion.div>
+);
 
 export default MasterLeadTracker;
